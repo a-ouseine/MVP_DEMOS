@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Book an Appointment — {{BUSINESS_NAME}}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f4f5;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      background: #0a0a0a;
+      padding: 28px 32px;
+    }
+
+    .card-header h1 {
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card-header p { color: #888; font-size: 13px; }
+
+    .card-body { padding: 28px 32px 32px; }
+
+    .field { margin-bottom: 16px; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .required { color: #ef4444; margin-left: 2px; }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #e4e4e7;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #111;
+      padding: 11px 14px;
+      outline: none;
+      background: #fff;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+
+    input:focus, select:focus, textarea:focus { border-color: #4169e1; }
+    input::placeholder, textarea::placeholder { color: #aaa; }
+    select { cursor: pointer; }
+    textarea { resize: vertical; min-height: 90px; }
+
+    .divider { border: none; border-top: 1px solid #f0f0f0; margin: 20px 0; }
+
+    .btn {
+      width: 100%;
+      background: #0a0a0a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn:hover { background: #222; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .error { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
+    .error.visible { display: block; }
+
+    .spinner {
+      display: inline-block;
+      width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .success-screen { padding: 48px 32px; text-align: center; display: none; }
+    .success-screen.visible { display: block; }
+
+    .checkmark {
+      width: 56px; height: 56px;
+      background: #eef2ff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 24px;
+    }
+
+    .success-screen h2 { font-size: 20px; font-weight: 700; color: #111; margin-bottom: 8px; }
+    .success-screen p { font-size: 14px; color: #777; line-height: 1.6; }
+
+    .form-view.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <h1>{{BUSINESS_NAME}}</h1>
+      <p>Book an appointment. We'll confirm within a few hours.</p>
+    </div>
+
+    <div class="form-view" id="formView">
+      <div class="card-body">
+
+        <div class="row">
+          <div class="field">
+            <label>Your Name <span class="required">*</span></label>
+            <input type="text" id="bookName" placeholder="e.g. Sarah Mitchell" />
+          </div>
+          <div class="field">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" id="bookEmail" placeholder="your@email.com" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" id="bookPhone" placeholder="e.g. 07700 900123" />
+          </div>
+          <div class="field">
+            <label>Service Needed</label>
+            <select id="bookService">
+              <option value="">Select a service...</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Roofing">Roofing</option>
+              <option value="HVAC / Heating &amp; Cooling">HVAC / Heating &amp; Cooling</option>
+              <option value="Landscaping">Landscaping</option>
+              <option value="Gutter Cleaning">Gutter Cleaning</option>
+              <option value="Home Renovation">Home Renovation</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Pest Control">Pest Control</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="row">
+          <div class="field">
+            <label>Preferred Date</label>
+            <input type="date" id="bookDate" />
+          </div>
+          <div class="field">
+            <label>Preferred Time</label>
+            <select id="bookTime">
+              <option value="">Select a time...</option>
+              <option value="8:00 AM – 10:00 AM">8:00 AM – 10:00 AM</option>
+              <option value="10:00 AM – 12:00 PM">10:00 AM – 12:00 PM</option>
+              <option value="12:00 PM – 2:00 PM">12:00 PM – 2:00 PM</option>
+              <option value="2:00 PM – 4:00 PM">2:00 PM – 4:00 PM</option>
+              <option value="4:00 PM – 6:00 PM">4:00 PM – 6:00 PM</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Describe the Job</label>
+          <textarea id="bookMessage" placeholder="Tell us what needs doing — the more detail the better."></textarea>
+        </div>
+
+        <button class="btn" id="bookSubmitBtn" onclick="submitBooking()">Request Appointment</button>
+        <div class="error" id="bookError"></div>
+      </div>
+    </div>
+
+    <div class="success-screen" id="successScreen">
+      <div class="checkmark">&#10003;</div>
+      <h2>Appointment request sent!</h2>
+      <p>Check your inbox — a confirmation from <strong>{{BUSINESS_NAME}}</strong> is on its way.<br>We'll be in touch to confirm your time slot.</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('bookDate').min = today;
+    })();
+
+    async function submitBooking() {
+      const name = document.getElementById('bookName').value.trim();
+      const email = document.getElementById('bookEmail').value.trim();
+      const phone = document.getElementById('bookPhone').value.trim();
+      const service = document.getElementById('bookService').value;
+      const preferred_date = document.getElementById('bookDate').value;
+      const preferred_time = document.getElementById('bookTime').value;
+      const message = document.getElementById('bookMessage').value.trim();
+
+      const btn = document.getElementById('bookSubmitBtn');
+      const errorEl = document.getElementById('bookError');
+      errorEl.classList.remove('visible');
+
+      if (!name) { showErr('Please enter your name.'); return; }
+      if (!email) { showErr('Please enter your email address.'); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>Sending...`;
+
+      try {
+        const res = await fetch('/book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, service, preferred_date, preferred_time, message }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showErr(data.error);
+          btn.disabled = false;
+          btn.textContent = 'Request Appointment';
+        } else {
+          document.getElementById('formView').classList.add('hidden');
+          document.getElementById('successScreen').classList.add('visible');
+        }
+      } catch (err) {
+        showErr('Something went wrong. Please try again.');
+        btn.disabled = false;
+        btn.textContent = 'Request Appointment';
+      }
+    }
+
+    function showErr(msg) {
+      const el = document.getElementById('bookError');
+      el.textContent = msg;
+      el.classList.add('visible');
+    }
+  </script>
+</body>
+</html>

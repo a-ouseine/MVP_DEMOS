@@ -1,0 +1,1859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AIS — Home Services</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0a;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px;
+      background: #0d0d0d;
+      border-right: 1px solid #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      padding: 28px 0 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-brand {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.04em;
+      padding: 0 20px 20px;
+      border-bottom: 1px solid #1a1a1a;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-brand span { color: #4169e1; }
+    .brand-ai { color: #4169e1 !important; }
+    body.light .brand-ai { color: #191970 !important; }
+
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 12px 20px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 20px;
+      font-size: 14px;
+      color: #666;
+      cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      user-select: none;
+    }
+
+    .nav-item:hover { color: #bbb; background: #111; }
+    .nav-item.active { color: #f0f0f0; border-left-color: #4169e1; background: #141414; }
+
+    /* ── Main ── */
+    .main { flex: 1; padding: 48px; max-width: 760px; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Shared form styles ── */
+    .header { margin-bottom: 32px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .header p { font-size: 14px; color: #888; }
+
+    .tag {
+      display: inline-block;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #4169e1;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+      margin-top: 16px;
+    }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    input, select, textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      color: #f0f0f0;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-top: 6px;
+      font-family: inherit;
+    }
+
+    select { cursor: pointer; }
+    select option { background: #1a1a1a; }
+    input::placeholder, textarea::placeholder { color: #444; }
+    input:focus, select:focus, textarea:focus { border-color: #4169e1; }
+    textarea { resize: vertical; min-height: 90px; }
+
+    .required-star { color: #f87171; margin-left: 2px; }
+    .divider { border: none; border-top: 1px solid #1e1e1e; margin: 24px 0; }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .toggle-row input[type="checkbox"] {
+      width: 18px; height: 18px;
+      accent-color: #4169e1;
+      cursor: pointer; padding: 0; margin: 0;
+      border-radius: 4px; flex-shrink: 0;
+    }
+
+    .toggle-row label { font-size: 14px; color: #aaa; cursor: pointer; }
+
+    .email-fields { display: none; }
+    .email-fields.visible { display: block; }
+
+    .btn-primary {
+      margin-top: 20px;
+      width: 100%;
+      background: #4169e1;
+      color: #0a0a0a;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary:hover { background: #3557c7; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .result {
+      margin-top: 28px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 20px;
+      display: none;
+    }
+
+    .result.visible { display: block; }
+
+    .result-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #4169e1;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .result pre {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #d4d4d4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #1e3370;
+      color: #4169e1;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .btn-copy {
+      margin-top: 14px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .btn-copy:hover { color: #f0f0f0; border-color: #444; }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #0a0a0a;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error { margin-top: 12px; color: #f87171; font-size: 13px; display: none; }
+    .error.visible { display: block; }
+
+    .success-msg {
+      margin-top: 20px;
+      background: #0f1835;
+      border: 1px solid #1a2d5e;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+      color: #4169e1;
+      display: none;
+    }
+
+    .success-msg.visible { display: block; }
+
+    /* ── Invoice line items ── */
+    .line-items-header {
+      display: grid;
+      grid-template-columns: 1fr 150px 38px;
+      gap: 8px;
+      margin-top: 10px;
+      margin-bottom: 4px;
+    }
+
+    .line-items-header span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .line-item-row {
+      display: grid;
+      grid-template-columns: 1fr 150px 38px;
+      gap: 8px;
+      margin-bottom: 8px;
+      align-items: center;
+    }
+
+    .line-item-row input { margin-top: 0; }
+
+    .btn-remove {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #555;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      width: 38px; height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .btn-remove:hover { color: #f87171; border-color: #f87171; }
+
+    .btn-add-item {
+      background: none;
+      border: 1px dashed #2a2a2a;
+      color: #555;
+      border-radius: 8px;
+      font-size: 13px;
+      padding: 9px 16px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      margin-top: 4px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-add-item:hover { color: #aaa; border-color: #444; }
+
+    .total-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 16px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #1e1e1e;
+    }
+
+    .total-label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .total-value { font-size: 22px; font-weight: 700; color: #4169e1; }
+
+    /* ── Autocomplete ── */
+    .autocomplete-wrapper { position: relative; }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: #181818;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      z-index: 200;
+      max-height: 220px;
+      overflow-y: auto;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .autocomplete-dropdown.open { display: block; }
+
+    .autocomplete-item {
+      padding: 10px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid #1e1e1e;
+      transition: background 0.12s;
+    }
+
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:first-child { border-radius: 10px 10px 0 0; }
+    .autocomplete-item:last-child:first-child { border-radius: 10px; }
+    .autocomplete-item:hover { background: #222; }
+
+    .autocomplete-item-name { font-size: 13px; color: #f0f0f0; font-weight: 600; }
+    .autocomplete-item-sub  { font-size: 11px; color: #666; margin-top: 2px; }
+
+    body.light .autocomplete-dropdown { background: #fff; border-color: #e5e5e5; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    body.light .autocomplete-item { border-bottom-color: #f0f0f0; }
+    body.light .autocomplete-item:hover { background: #f9f9f9; }
+    body.light .autocomplete-item-name { color: #111; }
+    body.light .autocomplete-item-sub  { color: #aaa; }
+
+    /* ── CRM lead grid ── */
+    .leads-grid {
+      display: grid;
+      grid-template-columns: 40px 1fr 82px 110px 86px 110px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .lead-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+
+    .lead-phone { font-size: 11px; color: #555; margin-top: 2px; }
+    .lead-preview { font-size: 12px; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Chip colors ── */
+    .lead-chip {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chip-blue   { background: #1e3a5f; color: #60a5fa; border: 1px solid #1e40af; }
+    .chip-yellow { background: #3b2f00; color: #fbbf24; border: 1px solid #78350f; }
+    .chip-orange { background: #2d1500; color: #fb923c; border: 1px solid #7c2d12; }
+    .chip-green  { background: #0f1835; color: #4169e1; border: 1px solid #1e3370; }
+    .chip-teal   { background: #0c2a2a; color: #2dd4bf; border: 1px solid #134e4a; }
+    .chip-red    { background: #3b1515; color: #f87171; border: 1px solid #7f1d1d; }
+    .chip-purple { background: #2d1a4a; color: #c084fc; border: 1px solid #6b21a8; }
+    .chip-grey   { background: #1a1a1a; color: #888;    border: 1px solid #2a2a2a; }
+
+    /* ── CRM ── */
+    .crm-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn-sm {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #888;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .btn-sm:hover { color: #f0f0f0; border-color: #444; }
+
+    .crm-link-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+
+    .crm-link-box span { color: #555; flex-shrink: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .crm-link-url { color: #4169e1; font-family: 'SF Mono', monospace; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .leads-table { width: 100%; }
+
+    .leads-header {
+      display: grid;
+      grid-template-columns: 140px 180px 120px 110px 130px;
+      gap: 12px;
+      padding: 0 14px 8px;
+      border-bottom: 1px solid #1e1e1e;
+      margin-bottom: 4px;
+    }
+
+    .leads-header span {
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .lead-row {
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .lead-row:hover { border-color: #2a2a2a; }
+
+    .lead-summary {
+      display: grid;
+      grid-template-columns: 140px 180px 120px 110px 130px;
+      gap: 12px;
+      padding: 12px 14px;
+      cursor: pointer;
+      align-items: center;
+    }
+
+    .lead-summary:hover { background: #111; }
+
+    .lead-name { font-size: 13px; color: #f0f0f0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lead-email { font-size: 12px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lead-service { font-size: 12px; color: #aaa; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lead-date { font-size: 12px; color: #666; }
+
+    .status-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .status-select {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      color: #f0f0f0;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      outline: none;
+      width: 100%;
+      margin-top: 0;
+    }
+
+    .lead-detail {
+      border-top: 1px solid #1a1a1a;
+      padding: 16px 14px;
+      background: #0d0d0d;
+      display: none;
+    }
+
+    .lead-detail.open { display: block; }
+
+    .detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .detail-section { }
+
+    .detail-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .detail-text {
+      font-size: 13px;
+      color: #aaa;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .crm-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #444;
+    }
+
+    .crm-empty p { font-size: 14px; line-height: 1.7; }
+    .crm-empty .hint { font-size: 12px; color: #333; margin-top: 8px; }
+
+    .crm-loading { color: #555; font-size: 14px; padding: 40px 0; }
+
+    /* ── Calendar ── */
+    .cal-layout {
+      display: grid;
+      grid-template-columns: 1fr 240px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .cal-panel {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .cal-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .cal-nav-label {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .cal-nav-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      color: #666;
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .cal-nav-btn:hover { color: #f0f0f0; border-color: #444; }
+
+    .cal-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      margin-bottom: 6px;
+    }
+
+    .cal-weekday {
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 6px 0;
+    }
+
+    .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #333;
+      position: relative;
+      cursor: default;
+      transition: background 0.15s;
+    }
+
+    .cal-day.in-month { color: #888; }
+    .cal-day.today { background: #4169e1; color: #0a0a0a; font-weight: 700; }
+    .cal-day.has-booking { cursor: pointer; }
+    .cal-day.has-booking.in-month:not(.today) { color: #f0f0f0; font-weight: 600; }
+    .cal-day.has-booking:hover:not(.today) { background: #1a1a1a; }
+    .cal-day.selected:not(.today) { background: #1e2a4e; border: 1px solid #4169e166; color: #4169e1; }
+
+    .cal-dot {
+      position: absolute;
+      bottom: 5px;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #4169e1;
+    }
+
+    .cal-day.today .cal-dot { background: #0a0a0a; }
+
+    /* ── Calendar sidebar ── */
+    .cal-sidebar { display: flex; flex-direction: column; gap: 10px; }
+
+    .cal-sidebar-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 2px;
+    }
+
+    .event-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-left: 3px solid #2a2a2a;
+      transition: border-color 0.15s;
+    }
+
+    .event-card.pending  { border-left-color: #fbbf24; }
+    .event-card.confirmed { border-left-color: #4169e1; }
+    .event-card.cancelled { border-left-color: #f87171; }
+    .event-card.completed { border-left-color: #60a5fa; }
+
+    .event-service { font-size: 14px; font-weight: 600; color: #f0f0f0; margin-bottom: 2px; }
+    .event-client  { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .event-time    { font-size: 11px; color: #555; margin-bottom: 10px; }
+
+    .cal-empty { color: #444; font-size: 13px; padding: 16px 0; }
+
+    .cal-booking-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .cal-booking-link span { color: #555; flex-shrink: 0; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+    .cal-booking-link-url { color: #4169e1; font-family: 'SF Mono', monospace; font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Lead Response stats ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f0f0f0;
+      line-height: 1;
+    }
+
+    .stat-value.green { color: #4169e1; }
+
+    /* ── Response feed ── */
+    .response-card {
+      background: #111;
+      border: 1px solid #1e1e1e;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .response-card:hover { border-color: #2a2a2a; }
+
+    .response-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      gap: 12px;
+    }
+
+    .response-meta { flex: 1; min-width: 0; }
+
+    .response-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f0f0f0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .response-sub {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .response-date {
+      font-size: 11px;
+      color: #444;
+      flex-shrink: 0;
+    }
+
+    .response-body {
+      border-top: 1px solid #1a1a1a;
+      padding: 16px 18px;
+      display: none;
+    }
+
+    .response-body.open { display: block; }
+
+    .response-body-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .response-body-text {
+      font-size: 13px;
+      color: #aaa;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .sent-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #4169e1;
+      background: #0f1835;
+      border: 1px solid #1a2d5e;
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: 0.04em;
+      flex-shrink: 0;
+    }
+
+    /* ── Theme toggle button ── */
+    .theme-toggle {
+      margin: auto 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #141414;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      padding: 9px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      width: calc(100% - 40px);
+    }
+    .theme-toggle:hover { color: #aaa; border-color: #2a2a2a; }
+    .theme-toggle-icon { font-size: 14px; }
+
+    /* ── Light mode overrides ── */
+    body.light {
+      background: #f4f4f5;
+      color: #111;
+    }
+
+    body.light .sidebar {
+      background: #ffffff;
+      border-right-color: #e5e5e5;
+    }
+
+    body.light .sidebar-brand { color: #111; border-bottom-color: #e5e5e5; }
+    body.light .sidebar-section { color: #bbb; }
+    body.light .nav-item { color: #888; }
+    body.light .nav-item:hover { color: #333; background: #f4f4f5; }
+    body.light .nav-item.active { color: #111; background: #eef2ff; border-left-color: #4169e1; }
+    body.light .theme-toggle { background: #f4f4f5; border-color: #e5e5e5; color: #888; }
+    body.light .theme-toggle:hover { color: #333; border-color: #d4d4d8; }
+
+    body.light .header h1 { color: #111; }
+    body.light .header p { color: #666; }
+    body.light .tag { background: #eef2ff; border-color: #b4c7fb; }
+    body.light .section-label { color: #888; }
+    body.light .divider { border-top-color: #e5e5e5; }
+
+    body.light input,
+    body.light select,
+    body.light textarea {
+      background: #fff;
+      border-color: #d4d4d8;
+      color: #111;
+    }
+
+    body.light select option { background: #fff; }
+    body.light input::placeholder,
+    body.light textarea::placeholder { color: #aaa; }
+
+    body.light .result {
+      background: #fff;
+      border-color: #e5e5e5;
+    }
+
+    body.light .result pre { color: #333; }
+    body.light .badge { background: #e8eeff; color: #1e40af; }
+    body.light .btn-copy { background: #f4f4f5; border-color: #d4d4d8; color: #555; }
+    body.light .btn-copy:hover { color: #111; border-color: #888; }
+    body.light .btn-remove { background: #f4f4f5; border-color: #d4d4d8; color: #888; }
+    body.light .btn-add-item { border-color: #d4d4d8; color: #888; }
+    body.light .btn-add-item:hover { color: #333; border-color: #888; }
+    body.light .total-row { border-top-color: #e5e5e5; }
+    body.light .btn-sm { background: #f4f4f5; border-color: #d4d4d8; color: #666; }
+    body.light .btn-sm:hover { color: #111; border-color: #888; }
+    body.light .success-msg { background: #eef2ff; border-color: #b4c7fb; color: #1e40af; }
+
+    body.light .crm-link-box { background: #fff; border-color: #e5e5e5; }
+    body.light .crm-link-box span { color: #aaa; }
+    body.light .lead-row { border-color: #e5e5e5; }
+    body.light .lead-row:hover { border-color: #d4d4d8; }
+    body.light .lead-summary:hover { background: #f9f9f9; }
+    body.light .lead-name { color: #111; }
+    body.light .lead-service { color: #555; }
+    body.light .status-select { background: #fff; border-color: #d4d4d8; color: #111; }
+    body.light .lead-detail { border-top-color: #e5e5e5; background: #f9f9f9; }
+    body.light .detail-label { color: #aaa; }
+    body.light .detail-text { color: #444; }
+    body.light .crm-empty { color: #aaa; }
+    body.light .crm-empty .hint { color: #bbb; }
+    body.light .crm-loading { color: #888; }
+
+    body.light .cal-panel { background: #fff; border-color: #e5e5e5; }
+    body.light .cal-nav-label { color: #111; }
+    body.light .cal-nav-btn { border-color: #d4d4d8; color: #666; }
+    body.light .cal-nav-btn:hover { color: #111; border-color: #888; }
+    body.light .cal-weekday { color: #bbb; }
+    body.light .cal-day.has-booking.in-month:not(.today) { color: #111; }
+    body.light .cal-day.has-booking:hover:not(.today) { background: #f0f0f0; }
+    body.light .cal-day.selected:not(.today) { background: #eef2ff; }
+    body.light .cal-sidebar-label { color: #aaa; }
+    body.light .event-card { background: #fff; border-color: #e5e5e5; }
+    body.light .event-service { color: #111; }
+    body.light .event-time { color: #888; }
+    body.light .cal-empty { color: #aaa; }
+    body.light .cal-booking-link { background: #fff; border-color: #e5e5e5; }
+    body.light .cal-booking-link span { color: #aaa; }
+    body.light .cal-booking-link-url { color: #2563eb; }
+
+    body.light .stat-card { background: #fff; border-color: #e5e5e5; }
+    body.light .stat-label { color: #888; }
+    body.light .stat-value { color: #111; }
+
+    body.light .response-card { background: #fff; border-color: #e5e5e5; }
+    body.light .response-card:hover { border-color: #d4d4d8; }
+    body.light .response-name { color: #111; }
+    body.light .response-body { border-top-color: #e5e5e5; }
+    body.light .response-body-label { color: #aaa; }
+    body.light .response-body-text { color: #444; }
+    body.light .sent-chip { background: #e8eeff; border-color: #b4c7fb; }
+
+    body.light .leads-header span { color: #aaa; }
+    body.light .line-items-header span { color: #aaa; }
+    body.light .lead-phone  { color: #aaa; }
+    body.light .lead-preview { color: #888; }
+    body.light .chip-blue   { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+    body.light .chip-yellow { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+    body.light .chip-orange { background: #ffedd5; color: #c2410c; border-color: #fed7aa; }
+    body.light .chip-green  { background: #e8eeff; color: #1e40af; border-color: #b4c7fb; }
+    body.light .chip-teal   { background: #ccfbf1; color: #115e59; border-color: #99f6e4; }
+    body.light .chip-red    { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    body.light .chip-purple { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }
+    body.light .chip-grey   { background: #f4f4f5; color: #666;    border-color: #e4e4e7; }
+  </style>
+</head>
+<body>
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">Flocean <span class="brand-ai">AI</span></div>
+    <div class="sidebar-section">Pipeline</div>
+    <div class="nav-item active" id="nav-leads" onclick="showPage('leads')">Lead Responses</div>
+    <div class="nav-item" id="nav-bookings" onclick="showPage('bookings')">Bookings</div>
+    <div class="nav-item" id="nav-crm" onclick="showPage('crm')">CRM</div>
+    <div class="sidebar-section">Tools</div>
+    <div class="nav-item" id="nav-quote" onclick="showPage('quote')">Quote Generator</div>
+    <div class="nav-item" id="nav-invoice" onclick="showPage('invoice')">Invoice</div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+      <span class="theme-toggle-icon" id="themeIcon">☀️</span>
+      <span id="themeLabel">Light Mode</span>
+    </button>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- ── Quote Page ── -->
+    <div id="page-quote" class="page">
+      <div class="header">
+        <div class="tag">AI-Powered</div>
+        <h1>Home Services Quote Generator</h1>
+        <p>Fill in the job details below. Get a professional estimate in seconds.</p>
+      </div>
+
+      <div class="section-label">Job Type <span class="required-star">*</span></div>
+      <select id="jobType">
+        <option value="">Select a service...</option>
+        <option value="Plumbing">Plumbing</option>
+        <option value="Electrical">Electrical</option>
+        <option value="Roofing">Roofing</option>
+        <option value="HVAC">HVAC / Heating &amp; Cooling</option>
+        <option value="Landscaping">Landscaping</option>
+        <option value="Gutter Cleaning">Gutter Cleaning</option>
+        <option value="Home Renovation">Home Renovation</option>
+        <option value="Cleaning">Cleaning</option>
+        <option value="Pest Control">Pest Control</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <div class="section-label">Property Details <span class="required-star">*</span></div>
+      <div class="row">
+        <select id="propertyType">
+          <option value="">Property type...</option>
+          <option value="single-family home">Single-family home</option>
+          <option value="apartment/condo">Apartment / Condo</option>
+          <option value="townhouse">Townhouse</option>
+          <option value="commercial building">Commercial building</option>
+        </select>
+        <select id="propertySize">
+          <option value="">Approx. size...</option>
+          <option value="under 1,000 sq ft">Under 1,000 sq ft</option>
+          <option value="1,000–1,500 sq ft">1,000–1,500 sq ft</option>
+          <option value="1,500–2,500 sq ft">1,500–2,500 sq ft</option>
+          <option value="2,500–4,000 sq ft">2,500–4,000 sq ft</option>
+          <option value="over 4,000 sq ft">Over 4,000 sq ft</option>
+        </select>
+      </div>
+
+      <div class="section-label">Work Area <span class="required-star">*</span></div>
+      <select id="accessType">
+        <option value="">Where will the work take place?</option>
+        <option value="outdoor / exterior (ground level, yard, driveway, garden)">Outdoor / exterior — ground level, yard, driveway, garden</option>
+        <option value="indoor / interior (standard room access)">Indoor / interior — standard room access</option>
+        <option value="elevated or hard to reach (roof, 2nd story, attic, tall trees)">Elevated or hard to reach — roof, 2nd story, attic, tall trees</option>
+        <option value="concealed or underground (inside wall, ceiling, crawl space, underground)">Concealed or underground — inside wall, ceiling, crawl space</option>
+      </select>
+
+      <div class="section-label">Urgency <span class="required-star">*</span></div>
+      <select id="urgency">
+        <option value="">Select urgency...</option>
+        <option value="standard (within the week)">Standard — within the week</option>
+        <option value="urgent (within 24–48 hours)">Urgent — within 24–48 hours</option>
+        <option value="emergency (same day)">Emergency — same day</option>
+      </select>
+
+      <div class="section-label">Additional Details</div>
+      <textarea id="extraDetails" placeholder="Any other info — e.g. brand of unit, number of fixtures, how long the issue has been happening, etc."></textarea>
+
+      <hr class="divider" />
+
+      <div class="toggle-row">
+        <input type="checkbox" id="sendEmailToggle" onchange="toggleEmailFields()" />
+        <label for="sendEmailToggle">Email this quote to the customer</label>
+      </div>
+
+      <div class="email-fields" id="emailFields">
+        <div class="section-label">Customer Info</div>
+        <div class="row">
+          <input type="text" id="customerName" placeholder="Customer name (optional)" />
+          <input type="email" id="customerEmail" placeholder="Customer email *" />
+        </div>
+        <div class="section-label">Your Business Name</div>
+        <input type="text" id="businessName" placeholder="E.g. Apex Home Services" />
+      </div>
+
+      <button class="btn-primary" id="submitBtn" onclick="generateQuote()">Generate Quote</button>
+      <div class="error" id="errorMsg"></div>
+
+      <div class="result" id="resultBox">
+        <div id="emailedBadge" class="badge" style="display:none;">Quote sent to customer</div>
+        <div class="result-label">Your Estimate</div>
+        <pre id="quoteOutput"></pre>
+        <button class="btn-copy" onclick="copyQuote()">Copy to clipboard</button>
+      </div>
+    </div>
+
+    <!-- ── Invoice Page ── -->
+    <div id="page-invoice" class="page">
+      <div class="header">
+        <div class="tag">Invoice</div>
+        <h1>Send an Invoice</h1>
+        <p>Enter the confirmed job details and amounts. The invoice will be emailed to your customer.</p>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="section-label">Invoice # <span class="required-star">*</span></div>
+          <input type="text" id="invNumber" placeholder="e.g. INV-001" />
+        </div>
+        <div>
+          <div class="section-label">Invoice Date</div>
+          <input type="date" id="invDate" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="section-label">Due Date</div>
+          <input type="date" id="invDueDate" />
+        </div>
+        <div>
+          <div class="section-label">Your Business Name</div>
+          <input type="text" id="invBusinessName" placeholder="e.g. Apex Home Services" />
+        </div>
+      </div>
+
+      <div class="section-label">Customer Info <span class="required-star">*</span></div>
+      <div class="row">
+        <div class="autocomplete-wrapper">
+          <input type="text" id="invCustomerName" placeholder="Customer name" autocomplete="off" />
+          <div class="autocomplete-dropdown" id="invNameDropdown"></div>
+        </div>
+        <input type="email" id="invCustomerEmail" placeholder="Customer email *" />
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section-label">Line Items <span class="required-star">*</span></div>
+      <div class="line-items-header">
+        <span>Description</span>
+        <span>Amount ($)</span>
+        <span></span>
+      </div>
+      <div id="lineItemsContainer"></div>
+      <button class="btn-add-item" onclick="addLineItem()">+ Add line item</button>
+
+      <div class="total-row">
+        <span class="total-label">Total</span>
+        <span class="total-value" id="invoiceTotal">$0.00</span>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="section-label">Notes / Payment Instructions</div>
+      <textarea id="invNotes" placeholder="e.g. Payment due within 14 days. Accepted: bank transfer, check, or cash."></textarea>
+
+      <button class="btn-primary" id="invSubmitBtn" onclick="sendInvoice()">Send Invoice</button>
+      <div class="error" id="invErrorMsg"></div>
+      <div class="success-msg" id="invSuccessMsg"></div>
+    </div>
+
+    <!-- ── Lead Response Page ── -->
+    <div id="page-leads" class="page active">
+      <div class="header">
+        <div class="tag">AI Responses</div>
+        <h1>Lead Responses</h1>
+        <p>Every AI response sent automatically to incoming leads.</p>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-label">Responses Sent</div>
+          <div class="stat-value green" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">New (Awaiting)</div>
+          <div class="stat-value" id="statNew">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Booked</div>
+          <div class="stat-value" id="statBooked">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Closed / Lost</div>
+          <div class="stat-value" id="statClosed">—</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <span style="font-size:11px;font-weight:600;color:#444;text-transform:uppercase;letter-spacing:0.08em;">Response Feed</span>
+        <button class="btn-sm" onclick="loadLeadResponses()">Refresh</button>
+      </div>
+
+      <div id="responseFeedContainer">
+        <div class="crm-loading">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ── Bookings Page ── -->
+    <div id="page-bookings" class="page">
+      <div class="header">
+        <div class="tag">Scheduling</div>
+        <h1>Bookings</h1>
+        <p>Click a highlighted date to see who's booked.</p>
+      </div>
+
+      <div class="cal-layout">
+        <div class="cal-panel">
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+            <span class="cal-nav-label" id="calMonthLabel"></span>
+            <button class="cal-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+          </div>
+          <div class="cal-weekdays">
+            <div class="cal-weekday">Sun</div>
+            <div class="cal-weekday">Mon</div>
+            <div class="cal-weekday">Tue</div>
+            <div class="cal-weekday">Wed</div>
+            <div class="cal-weekday">Thu</div>
+            <div class="cal-weekday">Fri</div>
+            <div class="cal-weekday">Sat</div>
+          </div>
+          <div class="cal-days" id="calDays"></div>
+        </div>
+
+        <div class="cal-sidebar">
+          <div class="cal-sidebar-label" id="calSidebarLabel">Upcoming</div>
+          <div id="calEventList"><div class="cal-empty">Loading...</div></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── CRM Page ── -->
+    <div id="page-crm" class="page">
+      <div class="header">
+        <div class="tag">CRM</div>
+        <h1>Leads</h1>
+        <p>All incoming leads from your contact form, with AI responses sent automatically.</p>
+      </div>
+
+
+      <div class="crm-toolbar">
+        <span id="leadsCount" style="font-size:13px;color:#555;"></span>
+        <button class="btn-sm" onclick="loadLeads()">Refresh</button>
+      </div>
+
+      <div id="leadsContainer">
+        <div class="crm-loading">Loading leads...</div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // ── Navigation ──
+    function showPage(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+      document.getElementById('nav-' + page).classList.add('active');
+      if (page === 'crm') loadLeads();
+      if (page === 'leads') loadLeadResponses();
+      if (page === 'bookings') loadBookings();
+      if (page === 'invoice') { _acLeads = null; }  // refresh lead cache on each visit
+    }
+
+    // ── Quote page ──
+    function toggleEmailFields() {
+      const toggle = document.getElementById("sendEmailToggle");
+      document.getElementById("emailFields").classList.toggle("visible", toggle.checked);
+      document.getElementById("submitBtn").textContent = toggle.checked ? "Generate & Send Quote" : "Generate Quote";
+    }
+
+    function buildDescription() {
+      const jobType = document.getElementById("jobType").value;
+      const propertyType = document.getElementById("propertyType").value;
+      const propertySize = document.getElementById("propertySize").value;
+      const accessType = document.getElementById("accessType").value;
+      const urgency = document.getElementById("urgency").value;
+      const extra = document.getElementById("extraDetails").value.trim();
+      let desc = `Job type: ${jobType}. Property: ${propertyType}, ${propertySize}. Access: ${accessType}. Urgency: ${urgency}.`;
+      if (extra) desc += ` Additional details: ${extra}`;
+      return desc;
+    }
+
+    async function generateQuote() {
+      const jobType = document.getElementById("jobType").value;
+      const propertyType = document.getElementById("propertyType").value;
+      const propertySize = document.getElementById("propertySize").value;
+      const accessType = document.getElementById("accessType").value;
+      const urgency = document.getElementById("urgency").value;
+      const sendEmail = document.getElementById("sendEmailToggle").checked;
+      const customerEmail = document.getElementById("customerEmail").value.trim();
+      const customerName = document.getElementById("customerName").value.trim();
+      const businessName = document.getElementById("businessName").value.trim() || "Home Services Pro";
+
+      const btn = document.getElementById("submitBtn");
+      const resultBox = document.getElementById("resultBox");
+      const errorMsg = document.getElementById("errorMsg");
+      const emailedBadge = document.getElementById("emailedBadge");
+
+      errorMsg.classList.remove("visible");
+      resultBox.classList.remove("visible");
+
+      if (!jobType) { showError("errorMsg", "Please select a job type."); return; }
+      if (!propertyType) { showError("errorMsg", "Please select a property type."); return; }
+      if (!propertySize) { showError("errorMsg", "Please select a property size."); return; }
+      if (!accessType) { showError("errorMsg", "Please select the work area."); return; }
+      if (!urgency) { showError("errorMsg", "Please select the urgency."); return; }
+      if (sendEmail && !customerEmail) { showError("errorMsg", "Please enter the customer's email address."); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>${sendEmail ? "Generating & Sending..." : "Generating..."}`;
+
+      try {
+        const res = await fetch("/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: buildDescription(),
+            customer_email: customerEmail,
+            customer_name: customerName,
+            business_name: businessName,
+            send_email: sendEmail
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.error && !data.incomplete) {
+          showError("errorMsg", data.error);
+        } else {
+          document.getElementById("quoteOutput").textContent = data.quote;
+          emailedBadge.style.display = data.emailed ? "inline-block" : "none";
+          resultBox.classList.add("visible");
+          if (data.incomplete) showError("errorMsg", data.error_email);
+        }
+      } catch (err) {
+        showError("errorMsg", "Something went wrong. Check that the server is running.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = sendEmail ? "Generate & Send Quote" : "Generate Quote";
+      }
+    }
+
+    function copyQuote() {
+      const text = document.getElementById("quoteOutput").textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector(".btn-copy");
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = "Copy to clipboard", 2000);
+      });
+    }
+
+    // ── Invoice page ──
+    let lineItemCount = 0;
+
+    function addLineItem(desc = "", amount = "") {
+      const id = ++lineItemCount;
+      const container = document.getElementById("lineItemsContainer");
+      const row = document.createElement("div");
+      row.className = "line-item-row";
+      row.id = `li-row-${id}`;
+      row.innerHTML = `
+        <input type="text" placeholder="e.g. Labour — pipe repair" value="${desc}" oninput="recalcTotal()" />
+        <input type="number" placeholder="0.00" min="0" step="0.01" value="${amount}" oninput="recalcTotal()" class="amount-input" />
+        <button class="btn-remove" onclick="removeLineItem(${id})" title="Remove">&times;</button>
+      `;
+      container.appendChild(row);
+      recalcTotal();
+    }
+
+    function removeLineItem(id) {
+      const row = document.getElementById(`li-row-${id}`);
+      if (row) row.remove();
+      recalcTotal();
+    }
+
+    function recalcTotal() {
+      let total = 0;
+      document.querySelectorAll('#lineItemsContainer .amount-input').forEach(input => {
+        const val = parseFloat(input.value);
+        if (!isNaN(val)) total += val;
+      });
+      document.getElementById("invoiceTotal").textContent = `$${total.toFixed(2)}`;
+    }
+
+    function getLineItems() {
+      const items = [];
+      document.querySelectorAll('#lineItemsContainer .line-item-row').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const desc = inputs[0].value.trim();
+        const amount = parseFloat(inputs[1].value);
+        if (desc || !isNaN(amount)) {
+          items.push({ description: desc, amount: isNaN(amount) ? 0 : amount });
+        }
+      });
+      return items;
+    }
+
+    async function sendInvoice() {
+      const invoiceNumber = document.getElementById("invNumber").value.trim();
+      const invoiceDate = document.getElementById("invDate").value;
+      const dueDate = document.getElementById("invDueDate").value;
+      const businessName = document.getElementById("invBusinessName").value.trim() || "Home Services Pro";
+      const customerName = document.getElementById("invCustomerName").value.trim();
+      const customerEmail = document.getElementById("invCustomerEmail").value.trim();
+      const notes = document.getElementById("invNotes").value.trim();
+      const lineItems = getLineItems();
+
+      const btn = document.getElementById("invSubmitBtn");
+      const errorEl = document.getElementById("invErrorMsg");
+      const successEl = document.getElementById("invSuccessMsg");
+
+      errorEl.classList.remove("visible");
+      successEl.classList.remove("visible");
+
+      if (!invoiceNumber) { showError("invErrorMsg", "Please enter an invoice number."); return; }
+      if (!customerEmail) { showError("invErrorMsg", "Please enter the customer's email address."); return; }
+      if (lineItems.length === 0) { showError("invErrorMsg", "Please add at least one line item."); return; }
+      if (lineItems.some(i => !i.description)) { showError("invErrorMsg", "Each line item needs a description."); return; }
+
+      btn.disabled = true;
+      btn.innerHTML = `<span class="spinner"></span>Sending Invoice...`;
+
+      try {
+        const res = await fetch("/invoice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoice_number: invoiceNumber,
+            invoice_date: invoiceDate,
+            due_date: dueDate,
+            business_name: businessName,
+            customer_name: customerName,
+            customer_email: customerEmail,
+            line_items: lineItems,
+            notes: notes
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          showError("invErrorMsg", data.error);
+        } else {
+          successEl.textContent = `Invoice ${invoiceNumber} sent to ${customerEmail}.`;
+          successEl.classList.add("visible");
+        }
+      } catch (err) {
+        showError("invErrorMsg", "Something went wrong. Check that the server is running.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Send Invoice";
+      }
+    }
+
+    // ── Lead Response page ──
+    async function loadLeadResponses() {
+      const container = document.getElementById("responseFeedContainer");
+      container.innerHTML = '<div class="crm-loading">Loading...</div>';
+
+      try {
+        const res = await fetch("/api/leads");
+        const leads = await res.json();
+
+        const total = leads.length;
+        const newCount = leads.filter(l => l.status === 'New').length;
+        const booked = leads.filter(l => l.status === 'Booked').length;
+        const closedLost = leads.filter(l => l.status === 'Closed' || l.status === 'Lost').length;
+
+        document.getElementById("statTotal").textContent = total;
+        document.getElementById("statNew").textContent = newCount;
+        document.getElementById("statBooked").textContent = booked;
+        document.getElementById("statClosed").textContent = closedLost;
+
+        if (leads.length === 0) {
+          container.innerHTML = `
+            <div class="crm-empty">
+              <p>No responses sent yet.</p>
+              <p class="hint">Share your contact link — responses will appear here automatically.</p>
+            </div>`;
+          return;
+        }
+
+        container.innerHTML = leads.map(lead => `
+          <div class="response-card">
+            <div class="response-header">
+              <div class="response-meta">
+                <div class="response-name">${escHtml(lead.name || 'Unknown')}</div>
+                <div class="response-sub">${escHtml(lead.email)}${lead.service ? ' · ' + escHtml(lead.service) : ''}</div>
+              </div>
+              <span class="sent-chip">&#10003; Sent</span>
+              <div class="response-date">${formatDate(lead.created_at)}</div>
+            </div>
+            <div class="response-body open">
+              <div class="response-body-label">Message Sent to Lead</div>
+              <div class="response-body-text">${escHtml(lead.ai_response || '—')}</div>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        container.innerHTML = '<div class="crm-loading" style="color:#f87171;">Failed to load responses.</div>';
+      }
+    }
+
+    // ── Bookings calendar ──
+    let calYear, calMonth, allBookings = [], calSelectedDate = null;
+
+    async function loadBookings() {
+      try {
+        const res = await fetch('/api/leads');
+        const leads = await res.json();
+        allBookings = leads.filter(l => l.preferred_date);
+      } catch (e) {
+        allBookings = [];
+      }
+      const now = new Date();
+      calYear = now.getFullYear();
+      calMonth = now.getMonth();
+      calSelectedDate = null;
+      renderCalendar();
+      renderEvents();
+    }
+
+    function renderCalendar() {
+      const label = document.getElementById('calMonthLabel');
+      label.textContent = new Date(calYear, calMonth, 1)
+        .toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const firstDow = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+      const bookedDates = new Set(allBookings.map(b => b.preferred_date).filter(Boolean));
+
+      let html = '';
+      for (let i = 0; i < firstDow; i++) html += '<div class="cal-day"></div>';
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const isToday = dateStr === todayStr;
+        const hasBooking = bookedDates.has(dateStr);
+        const isSelected = calSelectedDate === dateStr;
+        const classes = ['cal-day', 'in-month',
+          isToday ? 'today' : '',
+          hasBooking ? 'has-booking' : '',
+          isSelected ? 'selected' : ''
+        ].filter(Boolean).join(' ');
+
+        html += `<div class="${classes}" ${hasBooking ? `onclick="selectCalDate('${dateStr}')"` : ''}>
+          ${d}${hasBooking ? '<span class="cal-dot"></span>' : ''}
+        </div>`;
+      }
+
+      document.getElementById('calDays').innerHTML = html;
+    }
+
+    function selectCalDate(dateStr) {
+      calSelectedDate = calSelectedDate === dateStr ? null : dateStr;
+      renderCalendar();
+      renderEvents();
+    }
+
+    function changeMonth(dir) {
+      calMonth += dir;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      if (calMonth < 0)  { calMonth = 11; calYear--; }
+      calSelectedDate = null;
+      renderCalendar();
+      renderEvents();
+    }
+
+    function renderEvents() {
+      const label = document.getElementById('calSidebarLabel');
+      const list  = document.getElementById('calEventList');
+      const today = new Date().toISOString().split('T')[0];
+
+      let items = [...allBookings].filter(b => b.preferred_date);
+
+      if (calSelectedDate) {
+        label.textContent = formatDate(calSelectedDate);
+        items = items.filter(b => b.preferred_date === calSelectedDate);
+      } else {
+        label.textContent = 'Upcoming';
+        items = items
+          .filter(b => b.preferred_date >= today)
+          .sort((a, b) => a.preferred_date.localeCompare(b.preferred_date))
+          .slice(0, 8);
+      }
+
+      if (items.length === 0) {
+        list.innerHTML = `<div class="cal-empty">${calSelectedDate ? 'No bookings on this date.' : 'No upcoming bookings.'}</div>`;
+        return;
+      }
+
+      list.innerHTML = items.map(b => {
+        const statusMap = { booked: 'confirmed', closed: 'completed', lost: 'cancelled' };
+        const sc = statusMap[(b.status || '').toLowerCase()] || 'pending';
+        return `<div class="event-card ${sc}">
+          <div class="event-service">${escHtml(b.service || 'General Service')}</div>
+          <div class="event-client">${escHtml(b.name || b.email)}</div>
+          <div class="event-time">${formatDate(b.preferred_date)}${b.preferred_time ? ' · ' + escHtml(b.preferred_time) : ''}</div>
+          <select class="status-select" onchange="updateBookingStatus(${b.id}, this.value, this)">
+            ${['New','Responded','Quoted','Booked','Closed','Lost'].map(s =>
+              `<option value="${s}" ${s === b.status ? 'selected' : ''}>${s}</option>`
+            ).join('')}
+          </select>
+        </div>`;
+      }).join('');
+    }
+
+    async function updateBookingStatus(id, status, selectEl) {
+      await fetch(`/api/leads/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const booking = allBookings.find(b => b.id === id);
+      if (booking) booking.status = status;
+      renderEvents();
+    }
+
+    function copyBookingLink() {
+      const url = `${window.location.origin}/contact`;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.querySelector('#page-bookings .btn-sm');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+
+    // ── CRM page ──
+    async function loadLeads() {
+      const container = document.getElementById("leadsContainer");
+      container.innerHTML = '<div class="crm-loading">Loading...</div>';
+
+      try {
+        const res = await fetch("/api/leads");
+        const leads = await res.json();
+        renderLeads(leads);
+      } catch (err) {
+        container.innerHTML = '<div class="crm-loading" style="color:#f87171;">Failed to load leads.</div>';
+      }
+    }
+
+    function leadInitials(name) {
+      if (!name) return '?';
+      const p = name.trim().split(/\s+/);
+      return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : p[0][0].toUpperCase();
+    }
+
+    function leadAvatarColor(name) {
+      const palette = ['#1e40af','#9333ea','#0f766e','#b45309','#be185d','#0369a1','#2563eb','#b91c1c'];
+      let h = 0;
+      for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+      return palette[h % palette.length];
+    }
+
+    function serviceChip(service) {
+      if (!service) return `<span class="lead-chip chip-grey">—</span>`;
+      const s = service.toLowerCase();
+      let cls = 'chip-grey';
+      if (s.includes('plumb') || s.includes('hvac')) cls = 'chip-blue';
+      else if (s.includes('electric')) cls = 'chip-yellow';
+      else if (s.includes('roof') || s.includes('gutter')) cls = 'chip-orange';
+      else if (s.includes('landscape') || s.includes('clean')) cls = 'chip-green';
+      else if (s.includes('pest')) cls = 'chip-red';
+      else if (s.includes('renov')) cls = 'chip-purple';
+      else if (s.includes('other')) cls = 'chip-teal';
+      return `<span class="lead-chip ${cls}" title="${escHtml(service)}">${escHtml(service)}</span>`;
+    }
+
+    function statusChip(status) {
+      const map = { New:'chip-blue', Responded:'chip-yellow', Quoted:'chip-orange', Booked:'chip-green', Closed:'chip-teal', Lost:'chip-red' };
+      return `<span class="lead-chip ${map[status] || 'chip-grey'}">${escHtml(status || 'New')}</span>`;
+    }
+
+    function renderLeads(leads) {
+      const container = document.getElementById("leadsContainer");
+      const countEl = document.getElementById("leadsCount");
+
+      countEl.textContent = leads.length === 0 ? "" : `${leads.length} lead${leads.length === 1 ? "" : "s"}`;
+
+      if (leads.length === 0) {
+        container.innerHTML = `
+          <div class="crm-empty">
+            <p>No leads yet.</p>
+            <p class="hint">Share your contact link — leads will appear here automatically.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="leads-header leads-grid" style="padding:0 14px 8px;border-bottom:1px solid #1e1e1e;margin-bottom:4px;">
+          <span></span>
+          <span>Name</span>
+          <span>Date</span>
+          <span>Service</span>
+          <span>Status</span>
+          <span>Details</span>
+        </div>
+        ${leads.map(lead => `
+          <div class="lead-row" id="lead-${lead.id}">
+            <div class="lead-summary leads-grid" style="padding:12px 14px;" onclick="toggleDetail(${lead.id})">
+              <div class="lead-avatar" style="background:${leadAvatarColor(lead.name || '')}">${leadInitials(lead.name || '')}</div>
+              <div style="min-width:0;">
+                <div class="lead-name">${escHtml(lead.name || '—')}</div>
+                <div class="lead-email">${escHtml(lead.email)}</div>
+                ${lead.phone ? `<div class="lead-phone">📞 ${escHtml(lead.phone)}</div>` : ''}
+              </div>
+              <div class="lead-date">${formatDate(lead.created_at)}</div>
+              <div>${serviceChip(lead.service)}</div>
+              <div>${statusChip(lead.status)}</div>
+              <div class="lead-preview">${escHtml(truncate(lead.message, 42))}</div>
+            </div>
+            <div class="lead-detail" id="detail-${lead.id}">
+              <div class="detail-cols">
+                <div class="detail-section">
+                  <div class="detail-label">Their Message</div>
+                  <div class="detail-text">${escHtml(lead.message || '—')}</div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">AI Response Sent</div>
+                  <div class="detail-text">${escHtml(lead.ai_response || '—')}</div>
+                </div>
+              </div>
+              <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                ${lead.preferred_date ? `<span style="font-size:12px;color:#555;">Preferred: <strong style="color:#4169e1;">${formatDate(lead.preferred_date)}${lead.preferred_time ? ' · ' + escHtml(lead.preferred_time) : ''}</strong></span>` : ''}
+                <select class="status-select" style="max-width:160px;" onchange="updateStatus(${lead.id}, this.value)" onclick="event.stopPropagation()">
+                  ${['New','Responded','Quoted','Booked','Closed','Lost'].map(s =>
+                    `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${s}</option>`
+                  ).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        `).join('')}`;
+    }
+
+    function toggleDetail(id) {
+      const detail = document.getElementById(`detail-${id}`);
+      detail.classList.toggle("open");
+    }
+
+    async function updateStatus(id, status) {
+      await fetch(`/api/leads/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+    }
+
+    function copyContactLink() {
+      const url = `${window.location.origin}/contact`;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.querySelector('.crm-link-box .btn-sm');
+        btn.textContent = "Copied!";
+        setTimeout(() => btn.textContent = "Copy", 2000);
+      });
+    }
+
+    function formatDate(ts) {
+      if (!ts) return "—";
+      try {
+        const d = new Date(ts + "Z");
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      } catch { return ts; }
+    }
+
+    function truncate(str, len) {
+      if (!str) return '—';
+      return str.length > len ? str.slice(0, len).trimEnd() + '…' : str;
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // ── Shared ──
+    function showError(elId, msg) {
+      const el = document.getElementById(elId);
+      el.textContent = msg;
+      el.classList.add("visible");
+    }
+
+    // ── Invoice autocomplete ──
+    let _acLeads = null;
+    let _acMatches = [];
+
+    async function fetchLeadsForAc() {
+      if (_acLeads) return _acLeads;
+      try {
+        const res = await fetch('/api/leads');
+        _acLeads = await res.json();
+      } catch (e) {
+        _acLeads = [];
+      }
+      return _acLeads;
+    }
+
+    function setupInvoiceAutocomplete() {
+      const input = document.getElementById('invCustomerName');
+      const dropdown = document.getElementById('invNameDropdown');
+
+      input.addEventListener('focus', () => fetchLeadsForAc());
+
+      input.addEventListener('input', async () => {
+        const q = input.value.trim().toLowerCase();
+        if (!q) { dropdown.classList.remove('open'); return; }
+
+        const leads = await fetchLeadsForAc();
+        _acMatches = leads.filter(l =>
+          (l.name || '').toLowerCase().includes(q) ||
+          (l.email || '').toLowerCase().includes(q)
+        ).slice(0, 7);
+
+        if (_acMatches.length === 0) { dropdown.classList.remove('open'); return; }
+
+        dropdown.innerHTML = _acMatches.map((l, i) => `
+          <div class="autocomplete-item" onmousedown="selectInvoiceClient(${i})">
+            <div class="autocomplete-item-name">${escHtml(l.name || '—')}</div>
+            <div class="autocomplete-item-sub">${escHtml(l.email)}${l.phone ? ' · ' + escHtml(l.phone) : ''}</div>
+          </div>
+        `).join('');
+        dropdown.classList.add('open');
+      });
+
+      input.addEventListener('blur', () => {
+        setTimeout(() => dropdown.classList.remove('open'), 150);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.autocomplete-wrapper')) dropdown.classList.remove('open');
+      });
+    }
+
+    function selectInvoiceClient(idx) {
+      const l = _acMatches[idx];
+      if (!l) return;
+      document.getElementById('invCustomerName').value = l.name || '';
+      document.getElementById('invCustomerEmail').value = l.email || '';
+      document.getElementById('invNameDropdown').classList.remove('open');
+    }
+
+    // ── Theme ──
+    function applyTheme(light) {
+      if (light) {
+        document.body.classList.add('light');
+        document.getElementById('themeIcon').textContent = '🌙';
+        document.getElementById('themeLabel').textContent = 'Dark Mode';
+      } else {
+        document.body.classList.remove('light');
+        document.getElementById('themeIcon').textContent = '☀️';
+        document.getElementById('themeLabel').textContent = 'Light Mode';
+      }
+    }
+
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      applyTheme(isLight);
+    }
+
+    // ── Init ──
+    (function init() {
+      const today = new Date().toISOString().split('T')[0];
+      const due = new Date(Date.now() + 14 * 864e5).toISOString().split('T')[0];
+      document.getElementById("invDate").value = today;
+      document.getElementById("invDueDate").value = due;
+      addLineItem(); addLineItem(); addLineItem();
+      document.getElementById("contactLinkUrl").textContent = `${window.location.origin}/contact`;
+      document.getElementById("bookingLinkUrl").textContent = `${window.location.origin}/contact`;
+      applyTheme(localStorage.getItem('theme') === 'light');
+      setupInvoiceAutocomplete();
+      loadLeadResponses();
+    })();
+  </script>
+</body>
+</html>
