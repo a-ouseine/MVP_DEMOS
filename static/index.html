@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AIS — Home Services</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#4169e1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="AIS" />
+  <link rel="apple-touch-icon" href="/static/icon.svg" />
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -953,6 +959,75 @@
     body.light .chip-red    { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
     body.light .chip-purple { background: #f3e8ff; color: #7e22ce; border-color: #e9d5ff; }
     body.light .chip-grey   { background: #f4f4f5; color: #666;    border-color: #e4e4e7; }
+
+    /* ── Mobile nav (hidden on desktop) ── */
+    .mobile-nav { display: none; }
+
+    @media (max-width: 768px) {
+      body { display: block; }
+      .sidebar { display: none; }
+
+      .main {
+        padding: 20px 16px 90px;
+        max-width: 100%;
+      }
+
+      .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: #0d0d0d;
+        border-top: 1px solid #1a1a1a;
+        z-index: 100;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+
+      .mnav-btn {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 4px 8px;
+        background: none;
+        border: none;
+        color: #555;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        transition: color 0.15s;
+        gap: 3px;
+        text-transform: uppercase;
+      }
+
+      .mnav-btn.active { color: #4169e1; }
+      .mnav-btn:hover { color: #aaa; }
+      .mnav-icon { font-size: 20px; line-height: 1; }
+
+      body.light .mobile-nav { background: #ffffff; border-top-color: #e5e5e5; }
+      body.light .mnav-btn { color: #aaa; }
+      body.light .mnav-btn.active { color: #4169e1; }
+
+      .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+
+      .row { grid-template-columns: 1fr; }
+
+      .cal-layout { grid-template-columns: 1fr; }
+
+      .leads-grid { grid-template-columns: 36px 1fr auto; }
+      .leads-grid > :nth-child(3),
+      .leads-grid > :nth-child(4),
+      .leads-grid > :nth-child(6) { display: none; }
+
+      .detail-cols { grid-template-columns: 1fr; }
+
+      .line-items-header,
+      .line-item-row { grid-template-columns: 1fr 90px 38px; }
+
+      .header h1 { font-size: 20px; }
+      .response-header { flex-wrap: wrap; }
+    }
   </style>
 </head>
 <body>
@@ -1224,17 +1299,43 @@
 
   </main>
 
+  <nav class="mobile-nav">
+    <button class="mnav-btn active" id="mnav-leads" onclick="showPage('leads')">
+      <span class="mnav-icon">📥</span>
+      <span>Leads</span>
+    </button>
+    <button class="mnav-btn" id="mnav-bookings" onclick="showPage('bookings')">
+      <span class="mnav-icon">📅</span>
+      <span>Bookings</span>
+    </button>
+    <button class="mnav-btn" id="mnav-crm" onclick="showPage('crm')">
+      <span class="mnav-icon">👥</span>
+      <span>CRM</span>
+    </button>
+    <button class="mnav-btn" id="mnav-quote" onclick="showPage('quote')">
+      <span class="mnav-icon">💬</span>
+      <span>Quote</span>
+    </button>
+    <button class="mnav-btn" id="mnav-invoice" onclick="showPage('invoice')">
+      <span class="mnav-icon">🧾</span>
+      <span>Invoice</span>
+    </button>
+  </nav>
+
   <script>
     // ── Navigation ──
     function showPage(page) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.querySelectorAll('.mnav-btn').forEach(n => n.classList.remove('active'));
       document.getElementById('page-' + page).classList.add('active');
       document.getElementById('nav-' + page).classList.add('active');
+      const mBtn = document.getElementById('mnav-' + page);
+      if (mBtn) mBtn.classList.add('active');
       if (page === 'crm') loadLeads();
       if (page === 'leads') loadLeadResponses();
       if (page === 'bookings') loadBookings();
-      if (page === 'invoice') { _acLeads = null; }  // refresh lead cache on each visit
+      if (page === 'invoice') { _acLeads = null; }
     }
 
     // ── Quote page ──
@@ -1848,11 +1949,12 @@
       document.getElementById("invDate").value = today;
       document.getElementById("invDueDate").value = due;
       addLineItem(); addLineItem(); addLineItem();
-      document.getElementById("contactLinkUrl").textContent = `${window.location.origin}/contact`;
-      document.getElementById("bookingLinkUrl").textContent = `${window.location.origin}/contact`;
       applyTheme(localStorage.getItem('theme') === 'light');
       setupInvoiceAutocomplete();
       loadLeadResponses();
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
     })();
   </script>
 </body>

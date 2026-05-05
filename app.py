@@ -328,6 +328,18 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("static", "manifest.json", mimetype="application/json")
+
+
+@app.route("/sw.js")
+def service_worker():
+    response = send_from_directory("static", "sw.js", mimetype="application/javascript")
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
 @app.route("/contact", methods=["GET"])
 def contact_page():
     business_name = os.getenv("BUSINESS_NAME", "Home Services Pro")
