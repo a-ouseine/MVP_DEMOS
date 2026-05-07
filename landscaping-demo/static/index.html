@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Free Landscaping Estimate</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7fa;
+      --bg-card: #ffffff;
+      --bg-input: #f0f4f8;
+      --border: #dce4ef;
+      --blue: #4169e1;
+      --cyan: #00c6ff;
+      --text: #0a1628;
+      --text-muted: #64748b;
+      --text-label: #334155;
+      --placeholder: #94a3b8;
+      --glow-color: rgba(65,105,225,0.06);
+      --footer-text: #94a3b8;
+      --select-opt: #ffffff;
+    }
+
+    body.dark {
+      --bg: #0a1628;
+      --bg-card: #112240;
+      --bg-input: #0d1f3c;
+      --border: #1e3a5f;
+      --text: #ffffff;
+      --text-muted: #8892a4;
+      --text-label: #c8d4e3;
+      --placeholder: #3d5070;
+      --glow-color: rgba(65,105,225,0.15);
+      --footer-text: #2d3748;
+      --select-opt: #112240;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, var(--glow-color) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(65,105,225,0.12);
+      border: 1px solid rgba(65,105,225,0.3);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-size: clamp(28px, 5vw, 42px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+
+    h1 span {
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ── FORM CARD ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-label);
+      letter-spacing: 0.3px;
+    }
+
+    label span {
+      color: var(--blue);
+      margin-left: 2px;
+    }
+
+    input, select, textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s, background 0.3s;
+      width: 100%;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--placeholder); }
+    select option { background: var(--select-opt); }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+    textarea { resize: vertical; min-height: 110px; }
+
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.3px;
+    }
+
+    .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── STATES ── */
+    #loading-state, #success-state { display: none; }
+
+    .loader-wrap {
+      text-align: center;
+      padding: 48px 0;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-wrap p { color: var(--text-muted); font-size: 15px; }
+    .loader-wrap strong { color: var(--text); }
+
+    /* ── SUCCESS ── */
+    .success-wrap {
+      text-align: center;
+      padding: 48px 0 32px;
+    }
+
+    .check-circle {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 32px;
+      color: #ffffff;
+    }
+
+    .success-wrap h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .success-wrap p {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .success-wrap p strong { color: var(--text); }
+
+    .booking-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 8px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .booking-card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .booking-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .booking-btn {
+      display: inline-block;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      color: #ffffff;
+      text-decoration: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 15px;
+      transition: opacity 0.2s;
+    }
+
+    .booking-btn:hover { opacity: 0.9; }
+
+    .restart-link {
+      display: block;
+      margin-top: 20px;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .restart-link:hover { color: var(--text); }
+
+    /* ── ERROR ── */
+    .error-msg {
+      display: none;
+      background: rgba(220,53,69,0.1);
+      border: 1px solid rgba(220,53,69,0.3);
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    body.dark .error-msg { color: #fc8181; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s, color 0.2s;
+      margin-bottom: 16px;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    .powered {
+      font-size: 12px;
+      color: var(--footer-text);
+    }
+
+    .powered span {
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    /* ── COPY TOGGLE ── */
+    .copy-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      cursor: pointer;
+    }
+
+    .copy-toggle input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+      border-radius: 4px;
+    }
+
+    .copy-toggle span {
+      font-size: 14px;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    #owner-email-field {
+      display: none;
+      margin-top: 12px;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 520px) {
+      .card { padding: 24px 20px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header>
+      <div class="badge">Free · Instant · No Obligation</div>
+      <h1>Send a free<br><span>landscaping estimate</span><br>in seconds</h1>
+      <p class="sub">Fill in the details below and we'll send a professional estimate straight to your customer's inbox and a copy of it to yours! Just check off send a copy.</p>
+    </header>
+
+    <div class="card">
+
+      <!-- FORM -->
+      <div id="form-state">
+        <form id="estimate-form">
+          <div class="form-grid">
+
+            <div class="field">
+              <label>Your Name <span>*</span></label>
+              <input type="text" id="name" placeholder="John Smith" required />
+            </div>
+
+            <div class="field">
+              <label>Email Address <span>*</span></label>
+              <input type="email" id="email" placeholder="john@example.com" required />
+            </div>
+
+            <div class="field full">
+              <label>Job Type <span>*</span></label>
+              <select id="job_type" required>
+                <option value="" disabled selected>Select a service...</option>
+                <option>Lawn Mowing & Maintenance</option>
+                <option>Garden Design & Planting</option>
+                <option>Hedge & Shrub Trimming</option>
+                <option>Tree Services & Removal</option>
+                <option>Irrigation & Drainage</option>
+                <option>Hardscaping (Patios, Walkways, Walls)</option>
+                <option>Mulching & Ground Cover</option>
+                <option>Lawn Restoration & Seeding</option>
+                <option>Landscape Lighting</option>
+                <option>Snow Removal</option>
+                <option>General Cleanup & Yard Waste Removal</option>
+                <option>Commercial Landscaping</option>
+                <option>Full Property Makeover</option>
+                <option>Other</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Property Size</label>
+              <select id="property_size">
+                <option value="" disabled selected>Select size...</option>
+                <option>Small (under 2,500 sq ft)</option>
+                <option>Medium (2,500 – 7,500 sq ft)</option>
+                <option>Large (7,500 – 15,000 sq ft)</option>
+                <option>Extra Large (15,000+ sq ft)</option>
+                <option>Commercial Property</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Location (City / Zip)</label>
+              <input type="text" id="location" placeholder="e.g. Austin, TX" />
+            </div>
+
+            <div class="field full">
+              <label>Describe the Job <span>*</span></label>
+              <textarea id="description" placeholder="Tell us what you need done. The more detail the better — current state of the yard, specific areas, any preferences, etc." required></textarea>
+            </div>
+
+          </div>
+
+          <div class="field full" style="margin-top: 8px;">
+            <label class="copy-toggle">
+              <input type="checkbox" id="send-copy" onchange="toggleOwnerEmail()" />
+              <span>Send a copy of this estimate to my email</span>
+            </label>
+            <div id="owner-email-field">
+              <input type="email" id="owner_email" placeholder="Your email address" style="margin-top:0;" />
+            </div>
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn">
+            Get My Free Estimate →
+          </button>
+          <div class="error-msg" id="error-msg"></div>
+        </form>
+      </div>
+
+      <!-- LOADING -->
+      <div id="loading-state">
+        <div class="loader-wrap">
+          <div class="spinner"></div>
+          <p><strong>Generating your estimate...</strong></p>
+          <p>Our AI is calculating the scope and pricing.<br>This takes about 10 seconds.</p>
+        </div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div id="success-state">
+        <div class="success-wrap">
+          <div class="check-circle">✓</div>
+          <h2>Estimate Sent!</h2>
+          <p>Your free landscaping estimate has been sent to<br><strong id="confirm-email"></strong></p>
+          <p style="margin-bottom:0;">Check your inbox — it should arrive within a minute.</p>
+        </div>
+        <div class="booking-card">
+          <h3>Ready to move forward?</h3>
+          <p>Book a free 15-minute call. We'll confirm the exact scope, answer any questions, and get you on the schedule.</p>
+          <a href="https://cal.com/ahamed-bangoura-sut4be/15min" target="_blank" class="booking-btn">
+            Book Your Free Call →
+          </a>
+        </div>
+        <span class="restart-link" onclick="resetForm()">← Get another estimate</span>
+      </div>
+
+    </div>
+
+    <footer>
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle">Switch to Dark Mode</button>
+      <p class="powered">Powered by <span>Flocean AI</span> &nbsp;·&nbsp; Done-for-you job acquisition for landscaping businesses</p>
+    </footer>
+
+  </div>
+
+  <script>
+    const form = document.getElementById('estimate-form');
+    const formState = document.getElementById('form-state');
+    const loadingState = document.getElementById('loading-state');
+    const successState = document.getElementById('success-state');
+    const errorMsg = document.getElementById('error-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const job_type = document.getElementById('job_type').value;
+      const property_size = document.getElementById('property_size').value;
+      const location = document.getElementById('location').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const sendCopy = document.getElementById('send-copy').checked;
+      const owner_email = sendCopy ? document.getElementById('owner_email').value.trim() : '';
+
+      if (sendCopy && !owner_email) {
+        errorMsg.textContent = 'Please enter your email address to receive a copy.';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      formState.style.display = 'none';
+      loadingState.style.display = 'block';
+
+      try {
+        const res = await fetch('/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, job_type, property_size, location, description, owner_email })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          loadingState.style.display = 'none';
+          document.getElementById('confirm-email').textContent = email;
+          successState.style.display = 'block';
+        } else {
+          throw new Error(data.error || 'Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        loadingState.style.display = 'none';
+        formState.style.display = 'block';
+        errorMsg.textContent = err.message;
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Get My Free Estimate →';
+      }
+    });
+
+    function toggleOwnerEmail() {
+      const checked = document.getElementById('send-copy').checked;
+      document.getElementById('owner-email-field').style.display = checked ? 'block' : 'none';
+    }
+
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle('dark');
+      document.getElementById('theme-toggle').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    }
+
+    function resetForm() {
+      form.reset();
+      document.getElementById('owner-email-field').style.display = 'none';
+      successState.style.display = 'none';
+      formState.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Get My Free Estimate →';
+    }
+  </script>
+</body>
+</html>
