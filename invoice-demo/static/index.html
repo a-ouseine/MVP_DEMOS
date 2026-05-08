@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Invoice Generator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f7fa;
+      --bg-card: #ffffff;
+      --bg-input: #f0f4f8;
+      --bg-table-head: #e8edf5;
+      --border: #dce4ef;
+      --blue: #4169e1;
+      --cyan: #00c6ff;
+      --text: #0a1628;
+      --text-muted: #64748b;
+      --text-label: #334155;
+      --placeholder: #94a3b8;
+      --glow-color: rgba(65,105,225,0.06);
+      --footer-text: #94a3b8;
+      --select-opt: #ffffff;
+      --section-label: #4169e1;
+      --divider: #e8edf5;
+      --amount-bg: #f0f4f8;
+      --total-bg: #eef2ff;
+    }
+
+    body.dark {
+      --bg: #0a1628;
+      --bg-card: #112240;
+      --bg-input: #0d1f3c;
+      --bg-table-head: #0d2137;
+      --border: #1e3a5f;
+      --text: #ffffff;
+      --text-muted: #8892a4;
+      --text-label: #c8d4e3;
+      --placeholder: #3d5070;
+      --glow-color: rgba(65,105,225,0.15);
+      --footer-text: #2d3748;
+      --select-opt: #112240;
+      --section-label: #4169e1;
+      --divider: #1e3a5f;
+      --amount-bg: #0a1628;
+      --total-bg: #0d1f3c;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, var(--glow-color) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(65,105,225,0.12);
+      border: 1px solid rgba(65,105,225,0.3);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 5vw, 40px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    h1 span {
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sub {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    /* ── SECTION LABEL ── */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--section-label);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin: 28px 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .section-title:first-child { margin-top: 0; }
+
+    /* ── GRID ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-label);
+      letter-spacing: 0.3px;
+    }
+
+    label .req { color: var(--blue); margin-left: 2px; }
+
+    input, select, textarea {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.3s;
+      width: 100%;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--placeholder); }
+    select option { background: var(--select-opt); }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: 0.5;
+      cursor: pointer;
+    }
+
+    /* ── LINE ITEMS ── */
+    .line-items-header {
+      display: grid;
+      grid-template-columns: 1fr 80px 110px 100px 36px;
+      gap: 8px;
+      margin-bottom: 6px;
+      padding: 0 4px;
+    }
+
+    .line-items-header span {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .line-items-header span.right { text-align: right; }
+    .line-items-header span.center { text-align: center; }
+
+    .line-item {
+      display: grid;
+      grid-template-columns: 1fr 80px 110px 100px 36px;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .item-amount {
+      background: var(--amount-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
+      transition: background 0.3s;
+    }
+
+    .remove-btn {
+      width: 36px;
+      height: 36px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, color 0.2s;
+      padding: 0;
+      flex-shrink: 0;
+      font-family: inherit;
+    }
+
+    .remove-btn:hover { border-color: #dc2626; color: #dc2626; }
+
+    .add-item-btn {
+      background: transparent;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 10px;
+      width: 100%;
+      margin-top: 4px;
+      font-family: inherit;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .add-item-btn:hover { border-color: var(--blue); background: rgba(65,105,225,0.05); }
+
+    /* ── TOTALS ── */
+    .totals-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      margin-top: 16px;
+      gap: 6px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      width: 240px;
+      font-size: 14px;
+    }
+
+    .totals-row span:first-child { color: var(--text-muted); }
+    .totals-row span:last-child { color: var(--text); font-weight: 500; }
+
+    .totals-divider {
+      width: 240px;
+      height: 1px;
+      background: var(--divider);
+      margin: 4px 0;
+    }
+
+    .totals-total {
+      display: flex;
+      justify-content: space-between;
+      width: 240px;
+    }
+
+    .totals-total span:first-child {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .totals-total span:last-child {
+      font-size: 18px;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── TAX ROW ── */
+    .tax-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .tax-row label { white-space: nowrap; margin-bottom: 0; }
+
+    .tax-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tax-input-wrap input {
+      width: 80px;
+    }
+
+    .tax-input-wrap span {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ── SUBMIT ── */
+    .submit-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(90deg, var(--blue), var(--cyan));
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 28px;
+      transition: opacity 0.2s, transform 0.15s;
+      letter-spacing: 0.3px;
+      font-family: inherit;
+    }
+
+    .submit-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    /* ── STATES ── */
+    #loading-state, #success-state { display: none; }
+
+    .loader-wrap {
+      text-align: center;
+      padding: 56px 0;
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader-wrap p { color: var(--text-muted); font-size: 15px; }
+    .loader-wrap strong { color: var(--text); }
+
+    /* ── SUCCESS ── */
+    .success-wrap {
+      text-align: center;
+      padding: 56px 0 40px;
+    }
+
+    .check-circle {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 32px;
+      color: #ffffff;
+    }
+
+    .success-wrap h2 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+    .success-wrap p { color: var(--text-muted); font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+    .success-wrap p strong { color: var(--text); }
+
+    .restart-link {
+      display: block;
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .restart-link:hover { color: var(--text); }
+
+    /* ── ERROR ── */
+    .error-msg {
+      display: none;
+      background: rgba(220,53,69,0.1);
+      border: 1px solid rgba(220,53,69,0.3);
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-top: 14px;
+    }
+
+    body.dark .error-msg { color: #fc8181; }
+
+    /* ── COPY TOGGLE ── */
+    .copy-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .copy-toggle input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--blue);
+      cursor: pointer;
+      flex-shrink: 0;
+      padding: 0;
+    }
+
+    .copy-toggle span {
+      font-size: 14px;
+      color: var(--text-muted);
+      user-select: none;
+    }
+
+    #sender-email-field { display: none; margin-top: 10px; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      margin-top: 36px;
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 8px 20px;
+      border-radius: 100px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s, color 0.2s;
+      margin-bottom: 14px;
+    }
+
+    .theme-toggle:hover { border-color: var(--blue); color: var(--blue); }
+
+    .powered { font-size: 12px; color: var(--footer-text); }
+    .powered span { color: var(--blue); font-weight: 600; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      .card { padding: 24px 16px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: 1; }
+      .line-items-header { display: none; }
+      .line-item { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; }
+      .line-item input:first-child { grid-column: 1 / -1; }
+      .totals-row, .totals-total, .totals-divider { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header>
+      <div class="badge">Professional · Instant · Automated</div>
+      <h1>Send a professional<br><span>invoice</span> in seconds</h1>
+      <p class="sub">Fill in the details below and we'll send a polished invoice straight to your customer's inbox.</p>
+    </header>
+
+    <div class="card">
+
+      <!-- FORM -->
+      <div id="form-state">
+        <form id="invoice-form">
+
+          <!-- Business & Invoice Info -->
+          <div class="section-title">Business & Invoice Info</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Business Name <span class="req">*</span></label>
+              <input type="text" id="business_name" placeholder="e.g. Green Valley Landscaping" required />
+            </div>
+            <div class="field">
+              <label>Invoice # <span class="req">*</span></label>
+              <input type="text" id="invoice_number" placeholder="INV-001" required />
+            </div>
+            <div class="field">
+              <label>Invoice Date <span class="req">*</span></label>
+              <input type="date" id="invoice_date" required />
+            </div>
+            <div class="field">
+              <label>Due Date <span class="req">*</span></label>
+              <input type="date" id="due_date" required />
+            </div>
+          </div>
+
+          <!-- Customer Info -->
+          <div class="section-title">Bill To</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Customer Name <span class="req">*</span></label>
+              <input type="text" id="customer_name" placeholder="John Smith" required />
+            </div>
+            <div class="field">
+              <label>Customer Email <span class="req">*</span></label>
+              <input type="email" id="customer_email" placeholder="john@example.com" required />
+            </div>
+          </div>
+
+          <!-- Line Items -->
+          <div class="section-title">Line Items</div>
+          <div class="line-items-header">
+            <span>Description</span>
+            <span class="center">Qty</span>
+            <span class="right">Unit Price</span>
+            <span class="right">Amount</span>
+            <span></span>
+          </div>
+          <div id="line-items-container"></div>
+          <button type="button" class="add-item-btn" onclick="addLineItem()">+ Add Line Item</button>
+
+          <!-- Tax & Totals -->
+          <div class="section-title">Summary</div>
+          <div class="tax-row">
+            <label for="tax_rate">Tax Rate</label>
+            <div class="tax-input-wrap">
+              <input type="number" id="tax_rate" placeholder="0" min="0" max="100" step="0.1" oninput="updateTotals()" />
+              <span>%</span>
+            </div>
+          </div>
+          <div class="totals-wrap">
+            <div class="totals-row">
+              <span>Subtotal</span>
+              <span id="subtotal-display">$0.00</span>
+            </div>
+            <div class="totals-row" id="tax-row-display" style="display:none;">
+              <span>Tax (<span id="tax-rate-display">0</span>%)</span>
+              <span id="tax-amount-display">$0.00</span>
+            </div>
+            <div class="totals-divider"></div>
+            <div class="totals-total">
+              <span>Total Due</span>
+              <span id="total-display">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Notes -->
+          <div class="section-title">Notes & Payment Terms</div>
+          <div class="field full">
+            <textarea id="notes" placeholder="e.g. Payment due within 15 days. E-transfer to payments@yourbusiness.com. Thank you for your business!"></textarea>
+          </div>
+
+          <!-- Copy -->
+          <div class="section-title">Options</div>
+          <label class="copy-toggle">
+            <input type="checkbox" id="send-copy" onchange="toggleSenderEmail()" />
+            <span>Send a copy of this invoice to my email</span>
+          </label>
+          <div id="sender-email-field">
+            <input type="email" id="sender_email" placeholder="Your email address" />
+          </div>
+
+          <button type="submit" class="submit-btn" id="submit-btn">Send Invoice →</button>
+          <div class="error-msg" id="error-msg"></div>
+
+        </form>
+      </div>
+
+      <!-- LOADING -->
+      <div id="loading-state">
+        <div class="loader-wrap">
+          <div class="spinner"></div>
+          <p><strong>Sending your invoice...</strong></p>
+          <p>Delivering a professional invoice to your customer's inbox.</p>
+        </div>
+      </div>
+
+      <!-- SUCCESS -->
+      <div id="success-state">
+        <div class="success-wrap">
+          <div class="check-circle">✓</div>
+          <h2>Invoice Sent!</h2>
+          <p>Your invoice has been delivered to<br><strong id="confirm-email"></strong></p>
+          <p style="margin-bottom:0;">Check your inbox for the copy if you requested one.</p>
+          <span class="restart-link" onclick="resetForm()">← Send another invoice</span>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle">Switch to Dark Mode</button>
+      <p class="powered">Powered by <span>Flocean AI</span> &nbsp;·&nbsp; Done-for-you job acquisition for home service businesses</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // ── INIT ──
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      document.getElementById('invoice_date').value = toDateInput(today);
+      const due = new Date(today);
+      due.setDate(due.getDate() + 30);
+      document.getElementById('due_date').value = toDateInput(due);
+      const y = today.getFullYear();
+      const m = String(today.getMonth() + 1).padStart(2, '0');
+      const d = String(today.getDate()).padStart(2, '0');
+      const rand = String(Math.floor(Math.random() * 900) + 100);
+      document.getElementById('invoice_number').value = `INV-${y}${m}${d}-${rand}`;
+      addLineItem();
+    });
+
+    function toDateInput(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    // ── LINE ITEMS ──
+    function addLineItem() {
+      const container = document.getElementById('line-items-container');
+      const row = document.createElement('div');
+      row.className = 'line-item';
+      row.innerHTML = `
+        <input type="text" placeholder="Description" class="item-desc" oninput="updateTotals()" />
+        <input type="number" placeholder="1" class="item-qty" min="0" step="1" value="1" oninput="updateRowAmount(this); updateTotals();" />
+        <input type="number" placeholder="0.00" class="item-price" min="0" step="0.01" oninput="updateRowAmount(this); updateTotals();" />
+        <div class="item-amount">$0.00</div>
+        <button type="button" class="remove-btn" onclick="removeItem(this)">×</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function removeItem(btn) {
+      const rows = document.querySelectorAll('.line-item');
+      if (rows.length === 1) return;
+      btn.closest('.line-item').remove();
+      updateTotals();
+    }
+
+    function updateRowAmount(input) {
+      const row = input.closest('.line-item');
+      const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+      const price = parseFloat(row.querySelector('.item-price').value) || 0;
+      row.querySelector('.item-amount').textContent = fmt(qty * price);
+    }
+
+    // ── TOTALS ──
+    function updateTotals() {
+      let subtotal = 0;
+      document.querySelectorAll('.line-item').forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        subtotal += qty * price;
+      });
+
+      const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+      const taxAmount = subtotal * (taxRate / 100);
+      const total = subtotal + taxAmount;
+
+      document.getElementById('subtotal-display').textContent = fmt(subtotal);
+      document.getElementById('total-display').textContent = fmt(total);
+
+      const taxRow = document.getElementById('tax-row-display');
+      if (taxRate > 0) {
+        taxRow.style.display = 'flex';
+        document.getElementById('tax-rate-display').textContent = taxRate;
+        document.getElementById('tax-amount-display').textContent = fmt(taxAmount);
+      } else {
+        taxRow.style.display = 'none';
+      }
+    }
+
+    function fmt(n) {
+      return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    // ── TOGGLE ──
+    function toggleSenderEmail() {
+      const checked = document.getElementById('send-copy').checked;
+      document.getElementById('sender-email-field').style.display = checked ? 'block' : 'none';
+    }
+
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle('dark');
+      document.getElementById('theme-toggle').textContent = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    }
+
+    // ── SUBMIT ──
+    const form = document.getElementById('invoice-form');
+    const formState = document.getElementById('form-state');
+    const loadingState = document.getElementById('loading-state');
+    const successState = document.getElementById('success-state');
+    const errorMsg = document.getElementById('error-msg');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+
+      const sendCopy = document.getElementById('send-copy').checked;
+      const sender_email = sendCopy ? document.getElementById('sender_email').value.trim() : '';
+
+      if (sendCopy && !sender_email) {
+        errorMsg.textContent = 'Please enter your email address to receive a copy.';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      const lineItems = [];
+      document.querySelectorAll('.line-item').forEach(row => {
+        const desc = row.querySelector('.item-desc').value.trim();
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        if (desc || qty || price) {
+          lineItems.push({ description: desc, qty, price });
+        }
+      });
+
+      if (lineItems.length === 0) {
+        errorMsg.textContent = 'Please add at least one line item.';
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      const payload = {
+        business_name: document.getElementById('business_name').value.trim(),
+        invoice_number: document.getElementById('invoice_number').value.trim(),
+        invoice_date: document.getElementById('invoice_date').value,
+        due_date: document.getElementById('due_date').value,
+        customer_name: document.getElementById('customer_name').value.trim(),
+        customer_email: document.getElementById('customer_email').value.trim(),
+        line_items: lineItems,
+        tax_rate: parseFloat(document.getElementById('tax_rate').value) || 0,
+        notes: document.getElementById('notes').value.trim(),
+        sender_email,
+      };
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+      formState.style.display = 'none';
+      loadingState.style.display = 'block';
+
+      try {
+        const res = await fetch('/invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          loadingState.style.display = 'none';
+          document.getElementById('confirm-email').textContent = payload.customer_email;
+          successState.style.display = 'block';
+        } else {
+          throw new Error(data.error || 'Something went wrong. Please try again.');
+        }
+      } catch (err) {
+        loadingState.style.display = 'none';
+        formState.style.display = 'block';
+        errorMsg.textContent = err.message;
+        errorMsg.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Send Invoice →';
+      }
+    });
+
+    function resetForm() {
+      form.reset();
+      document.getElementById('line-items-container').innerHTML = '';
+      addLineItem();
+      document.getElementById('sender-email-field').style.display = 'none';
+      successState.style.display = 'none';
+      formState.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send Invoice →';
+      updateTotals();
+      window.addEventListener('DOMContentLoaded', () => {});
+      const today = new Date();
+      document.getElementById('invoice_date').value = toDateInput(today);
+      const due = new Date(today);
+      due.setDate(due.getDate() + 30);
+      document.getElementById('due_date').value = toDateInput(due);
+    }
+  </script>
+</body>
+</html>
