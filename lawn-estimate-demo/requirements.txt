@@ -3,3 +3,5 @@ python-dotenv
 gunicorn
 anthropic
 requests
+gspread
+google-auth

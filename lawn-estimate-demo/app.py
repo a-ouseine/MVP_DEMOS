@@ -1,26 +1,102 @@
 import os, base64, requests, json, re, smtplib
+from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import anthropic
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import gspread
+from google.oauth2.service_account import Credentials
 
 load_dotenv()
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+
+DEMO_LIMIT = 4
+_usage: dict = {}
+
+def _get_ip() -> str:
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+
+def _check_limit():
+    ip = _get_ip()
+    count = _usage.get(ip, 0)
+    if count >= DEMO_LIMIT:
+        return jsonify({"error": "limit_reached", "message": "You've used your 4 free demo runs. DM me on Instagram to see the full system live."}), 429
+    _usage[ip] = count + 1
+    return None
+
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_APP_PASSWORD = os.getenv("SENDER_APP_PASSWORD")
+SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
+
+_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+_CREDS_FILE = os.path.join(os.path.dirname(__file__), "flocean-demos-a6a527f464c1.json")
+
+def _get_workbook():
+    creds = Credentials.from_service_account_file(_CREDS_FILE, scopes=_SCOPES)
+    gc = gspread.authorize(creds)
+    return gc.open_by_key(SHEET_ID)
+
+def log_to_sheet(business_name, owner_email, customer_name, customer_email, customer_phone,
+                 address, services, frequency, analysis, total):
+    try:
+        wb = _get_workbook()
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        # --- Results sheet (every submission) ---
+        results = wb.worksheet("Results")
+        results_headers = ["Timestamp", "Business Name", "Customer Name", "Customer Email",
+                           "Customer Phone", "Property Address", "Services", "Frequency",
+                           "Lawn SqFt", "Complexity", "Garden Beds", "Total ($)",
+                           "Sent to Customer", "AI Notes"]
+        if not results.get_all_values():
+            results.append_row(results_headers)
+        results.append_row([
+            timestamp, business_name, customer_name, customer_email, customer_phone,
+            address, ", ".join(services), frequency,
+            analysis.get("lawn_sqft", ""), analysis.get("complexity", ""),
+            analysis.get("bed_count", ""), f"${total:,.2f}",
+            "No", analysis.get("notes", ""),
+        ])
+
+        # --- Leads sheet (one row per business, skip duplicates) ---
+        leads = wb.worksheet("Leads")
+        leads_headers = ["Timestamp", "Business Name", "Owner Email", "Source",
+                         "Status", "Follow-up Date", "Notes"]
+        existing = leads.get_all_values()
+        if not existing:
+            leads.append_row(leads_headers)
+            existing = []
+        existing_emails = [row[2] for row in existing[1:] if len(row) > 2]
+        if owner_email not in existing_emails:
+            leads.append_row([
+                timestamp, business_name, owner_email,
+                "Lawn Estimator Demo", "New", "", "",
+            ])
+
+    except Exception as e:
+        print(f"SHEETS ERROR: {e}")
 
 BASE_RATES = {
-    "lawn_mowing":   0.012,
-    "edging":        0.003,
-    "leaf_cleanup":  0.008,
-    "hedge_trimming": 45.0,
-    "mulching":      55.0,
-    "fertilization": 0.004,
-    "aeration":      0.006,
+    "lawn_mowing":   0.015,
+    "edging":        0.005,
+    "leaf_cleanup":  0.012,
+    "hedge_trimming": 65.0,
+    "mulching":      65.0,
+    "fertilization": 0.008,
+    "aeration":      0.010,
+}
+SERVICE_MINIMUMS = {
+    "lawn_mowing":   40.0,
+    "edging":        25.0,
+    "leaf_cleanup":  45.0,
+    "hedge_trimming": 65.0,
+    "mulching":      65.0,
+    "fertilization": 50.0,
+    "aeration":      65.0,
 }
 COMPLEXITY_MULT  = {"simple": 1.0, "moderate": 1.25, "complex": 1.55}
 FREQUENCY_DISC   = {"one-time": 1.0, "monthly": 0.95, "bi-weekly": 0.90, "weekly": 0.85}
@@ -55,7 +131,7 @@ def get_satellite_image(lat, lng):
         "https://maps.googleapis.com/maps/api/staticmap",
         params={
             "center": f"{lat},{lng}",
-            "zoom": 19,
+            "zoom": 20,
             "size": "640x640",
             "maptype": "satellite",
             "format": "png",
@@ -68,23 +144,41 @@ def get_satellite_image(lat, lng):
 
 def analyze_property(image_b64, address, services):
     service_list = ", ".join(SERVICE_LABELS.get(s, s) for s in services)
-    prompt = f"""Analyze this aerial/satellite image of a residential property for a lawn care quote.
+    prompt = f"""You are analyzing a satellite image of a residential property to generate a precise lawn care estimate.
 
 Address: {address}
 Services requested: {service_list}
 
-Estimate:
-1. Turf/grass area in square feet (exclude house footprint, driveway, patios, walkways, pool)
-2. Complexity: simple (flat open lawn), moderate (some beds/trees/irregular edges), or complex (many obstacles, slopes, heavily landscaped)
-3. Number of visible garden/flower beds
-4. One-sentence observation relevant to the services requested
+Step 1 — Identify and EXCLUDE these from your turf calculation:
+- House/building footprint
+- Driveway and any paved surfaces
+- Patios, decks, and walkways
+- Pools, sheds, and other structures
+- Gravel or mulch-only areas with no grass
 
-Respond ONLY with valid JSON, no explanation:
-{{"lawn_sqft": <integer>, "complexity": "simple"|"moderate"|"complex", "bed_count": <integer>, "notes": "<string>"}}"""
+Step 2 — Estimate turf area in sections:
+- Front yard grass (sq ft)
+- Back yard grass (sq ft)
+- Side strips/other grass areas (sq ft)
+- Sum all sections for total lawn_sqft
+
+Step 3 — Assess complexity:
+- simple: flat, open lawn with clear edges and minimal obstacles
+- moderate: some garden beds, trees, irregular edges, or mixed terrain
+- complex: many obstacles, slopes, heavy landscaping, tight corners
+
+Step 4 — Count visible garden/flower beds (raised or ground-level).
+
+Step 5 — Write one specific observation about this property relevant to the services requested (mention what you see, not generic statements).
+
+If this is clearly a commercial, industrial, or non-residential property with no lawn, set lawn_sqft to 0 and explain in notes.
+
+Respond ONLY with valid JSON:
+{{"lawn_sqft": <integer>, "front_sqft": <integer>, "back_sqft": <integer>, "side_sqft": <integer>, "complexity": "simple"|"moderate"|"complex", "bed_count": <integer>, "notes": "<string>"}}"""
 
     msg = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=300,
+        max_tokens=500,
         messages=[{
             "role": "user",
             "content": [
@@ -98,8 +192,8 @@ Respond ONLY with valid JSON, no explanation:
     return json.loads(match.group() if match else text)
 
 
-def calculate_quote(analysis, services, frequency):
-    lawn_sqft = max(int(analysis.get("lawn_sqft", 2500)), 500)
+def calculate_quote(analysis, services, frequency, custom_minimums=None):
+    lawn_sqft = max(int(analysis.get("lawn_sqft", 2500)), 800)
     complexity = analysis.get("complexity", "moderate")
     bed_count  = max(int(analysis.get("bed_count", 0)), 0)
     mult = COMPLEXITY_MULT.get(complexity, 1.25)
@@ -110,15 +204,16 @@ def calculate_quote(analysis, services, frequency):
         rate = BASE_RATES.get(svc)
         if rate is None:
             continue
+        minimum = float(custom_minimums.get(svc, SERVICE_MINIMUMS.get(svc, 0))) if custom_minimums else SERVICE_MINIMUMS.get(svc, 0)
         if svc in ("lawn_mowing", "edging", "leaf_cleanup", "fertilization", "aeration"):
-            price  = lawn_sqft * rate * mult * disc
+            price  = max(lawn_sqft * rate * mult * disc, minimum)
             detail = f"{lawn_sqft:,} sq ft"
         elif svc == "mulching":
             beds   = max(bed_count, 1)
-            price  = rate * beds * disc
+            price  = max(rate * beds * disc, minimum)
             detail = f"{beds} bed{'s' if beds != 1 else ''}"
         else:
-            price  = rate * mult * disc
+            price  = max(rate * mult * disc, minimum)
             detail = "Per visit"
         items.append({"service": SERVICE_LABELS[svc], "detail": detail, "price": round(price, 2)})
     return items
@@ -131,6 +226,10 @@ def index():
 
 @app.route("/quote", methods=["POST"])
 def quote_route():
+    limit = _check_limit()
+    if limit:
+        return limit
+
     data = request.json or {}
 
     if not GOOGLE_MAPS_API_KEY:
@@ -142,9 +241,10 @@ def quote_route():
     customer_email  = data.get("customer_email", "").strip()
     customer_phone  = data.get("customer_phone", "").strip()
     address         = data.get("address", "").strip()
-    services        = data.get("services", [])
-    frequency       = data.get("frequency", "one-time").strip()
-    notes           = data.get("notes", "").strip()
+    services         = data.get("services", [])
+    frequency        = data.get("frequency", "one-time").strip()
+    notes            = data.get("notes", "").strip()
+    custom_minimums  = data.get("custom_minimums", {})
 
     if not all([business_name, customer_name, customer_email, address]):
         return jsonify({"error": "Please fill in all required fields."}), 400
@@ -165,20 +265,24 @@ def quote_route():
         analysis = {"lawn_sqft": 2800, "complexity": "moderate", "bed_count": 2,
                     "notes": "Estimated based on typical residential property dimensions."}
 
-    line_items = calculate_quote(analysis, services, frequency)
+    non_residential_keywords = [
+        "commercial", "industrial", "parking lot", "not a residential",
+        "not residential", "warehouse", "office building", "retail", "solar panel",
+        "not suitable for lawn", "no lawn", "no grass",
+    ]
+    ai_notes_lower = analysis.get("notes", "").lower()
+    if any(kw in ai_notes_lower for kw in non_residential_keywords):
+        return jsonify({"error": "This looks like a commercial or non-residential property. This estimator is built for residential lawns — try a home address instead."}), 400
+
+    line_items = calculate_quote(analysis, services, frequency, custom_minimums)
     total = round(sum(i["price"] for i in line_items), 2)
 
-    try:
-        send_quote_email(
-            business_name=business_name, owner_email=owner_email,
-            customer_name=customer_name, customer_email=customer_email,
-            customer_phone=customer_phone, address=formatted_address,
-            frequency=frequency, line_items=line_items, total=total,
-            analysis=analysis, notes=notes,
-        )
-    except Exception as e:
-        print(f"EMAIL ERROR: {e}")
-        return jsonify({"error": f"Quote generated but email failed: {str(e)}"}), 500
+    log_to_sheet(
+        business_name=business_name, owner_email=owner_email,
+        customer_name=customer_name, customer_email=customer_email,
+        customer_phone=customer_phone, address=formatted_address,
+        services=services, frequency=frequency, analysis=analysis, total=total,
+    )
 
     return jsonify({
         "success": True,
@@ -186,11 +290,62 @@ def quote_route():
         "line_items": line_items,
         "total": total,
         "formatted_address": formatted_address,
+        "business_name": business_name,
+        "owner_email": owner_email,
+        "customer_name": customer_name,
+        "customer_email": customer_email,
+        "customer_phone": customer_phone,
+        "frequency": frequency,
+        "notes": notes,
     })
 
 
+@app.route("/send-quote", methods=["POST"])
+def send_quote_action():
+    data = request.json or {}
+    send_to_customer = data.get("send_to_customer", False)
+    try:
+        send_quote_email(
+            business_name=data.get("business_name", ""),
+            owner_email=data.get("owner_email", ""),
+            customer_name=data.get("customer_name", ""),
+            customer_email=data.get("customer_email", ""),
+            customer_phone=data.get("customer_phone", ""),
+            address=data.get("formatted_address", data.get("address", "")),
+            frequency=data.get("frequency", "one-time"),
+            line_items=data.get("line_items", []),
+            total=data.get("total", 0),
+            analysis=data.get("analysis", {}),
+            notes=data.get("notes", ""),
+            send_to_customer=send_to_customer,
+        )
+    except Exception as e:
+        print(f"EMAIL ERROR: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    if send_to_customer:
+        try:
+            wb = _get_workbook()
+            results = wb.worksheet("Results")
+            col_headers = results.row_values(1)
+            if "Sent to Customer" in col_headers:
+                sent_col = col_headers.index("Sent to Customer") + 1
+                customer_email_col = col_headers.index("Customer Email") + 1
+                target_email = data.get("customer_email", "")
+                all_rows = results.get_all_values()
+                for i, row in enumerate(all_rows[1:], start=2):
+                    if len(row) >= customer_email_col and row[customer_email_col - 1] == target_email:
+                        results.update_cell(i, sent_col, "Yes")
+                        break
+        except Exception as e:
+            print(f"SHEETS UPDATE ERROR: {e}")
+
+    return jsonify({"success": True})
+
+
 def send_quote_email(business_name, owner_email, customer_name, customer_email,
-                     customer_phone, address, frequency, line_items, total, analysis, notes):
+                     customer_phone, address, frequency, line_items, total, analysis, notes,
+                     send_to_customer=True):
 
     first_name = customer_name.split()[0]
     freq_label = FREQUENCY_LABELS.get(frequency, frequency.title())
@@ -281,8 +436,8 @@ def send_quote_email(business_name, owner_email, customer_name, customer_email,
   <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
     <div style="background:#ffffff;border-radius:16px;padding:36px;border:1px solid #dce4ef;">
       <div style="margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #e8edf5;">
-        <p style="color:#4169e1;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 6px;">Quote Sent — {business_name}</p>
-        <p style="color:#0a1628;font-size:20px;font-weight:800;margin:0;">{customer_name}</p>
+        <p style="color:#4169e1;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 6px;">{"New Estimate sent to" if send_to_customer else "New Estimate for"} — {business_name}</p>
+        <p style="color:#0a1628;font-size:20px;font-weight:800;margin:0;">{customer_name if send_to_customer else address}</p>
       </div>
       <p style="color:#64748b;font-size:13px;margin:0 0 4px;">Email: <span style="color:#4169e1;">{customer_email}</span></p>
       {phone_row}
@@ -322,16 +477,20 @@ def send_quote_email(business_name, owner_email, customer_name, customer_email,
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
         smtp.login(SENDER_EMAIL, SENDER_APP_PASSWORD)
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"Your free estimate from {business_name}"
-        msg["From"] = SENDER_EMAIL
-        msg["To"] = customer_email
-        msg.attach(MIMEText(customer_html, "html"))
-        smtp.sendmail(SENDER_EMAIL, customer_email, msg.as_string())
+        if send_to_customer:
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = f"Your free estimate from {business_name}"
+            msg["From"] = SENDER_EMAIL
+            msg["To"] = customer_email
+            msg.attach(MIMEText(customer_html, "html"))
+            smtp.sendmail(SENDER_EMAIL, customer_email, msg.as_string())
 
         if owner_email:
             note = MIMEMultipart("alternative")
-            note["Subject"] = f"Quote sent: {customer_name} — ${total:,.2f}/{frequency}"
+            if send_to_customer:
+                note["Subject"] = f"New Estimate sent to {customer_name} — ${total:,.2f}/{frequency}"
+            else:
+                note["Subject"] = f"New Estimate for {address} — ${total:,.2f}/{frequency}"
             note["From"] = SENDER_EMAIL
             note["To"] = owner_email
             note.attach(MIMEText(owner_html, "html"))
