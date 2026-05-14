@@ -1,10 +1,8 @@
-import os, base64, requests, json, re, smtplib
+import os, base64, requests, json, re
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 from dotenv import load_dotenv
 import anthropic
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -28,8 +26,7 @@ def _check_limit():
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_APP_PASSWORD = os.getenv("SENDER_APP_PASSWORD")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 SHEET_ID = os.getenv("GOOGLE_SHEET_ID")
 
 _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -482,27 +479,23 @@ def send_quote_email(business_name, owner_email, customer_name, customer_email,
 </body>
 </html>"""
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(SENDER_EMAIL, SENDER_APP_PASSWORD)
+    def _resend(to_email, subject, html, from_label="Lawn Estimator"):
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={"from": f"{from_label} <onboarding@resend.dev>", "to": [to_email], "subject": subject, "html": html},
+            timeout=15,
+        )
+        if resp.status_code not in (200, 201):
+            raise Exception(f"Resend {resp.status_code}: {resp.text}")
 
-        if send_to_customer:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = f"Your free estimate from {business_name}"
-            msg["From"] = SENDER_EMAIL
-            msg["To"] = customer_email
-            msg.attach(MIMEText(customer_html, "html"))
-            smtp.sendmail(SENDER_EMAIL, customer_email, msg.as_string())
+    if send_to_customer:
+        _resend(customer_email, f"Your free estimate from {business_name}", customer_html, business_name)
 
-        if owner_email:
-            note = MIMEMultipart("alternative")
-            if send_to_customer:
-                note["Subject"] = f"New Estimate sent to {customer_name} — ${total:,.2f}/{frequency}"
-            else:
-                note["Subject"] = f"New Estimate for {address} — ${total:,.2f}/{frequency}"
-            note["From"] = SENDER_EMAIL
-            note["To"] = owner_email
-            note.attach(MIMEText(owner_html, "html"))
-            smtp.sendmail(SENDER_EMAIL, owner_email, note.as_string())
+    if owner_email:
+        subj = (f"New Estimate sent to {customer_name} — ${total:,.2f}/{frequency}"
+                if send_to_customer else f"New Estimate for {address} — ${total:,.2f}/{frequency}")
+        _resend(owner_email, subj, owner_html, "Flocean AI")
 
 
 if __name__ == "__main__":
