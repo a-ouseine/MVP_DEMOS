@@ -36,7 +36,15 @@ _SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 _CREDS_FILE = os.path.join(os.path.dirname(__file__), "flocean-demos-a6a527f464c1.json")
 
 def _get_workbook():
-    creds = Credentials.from_service_account_file(_CREDS_FILE, scopes=_SCOPES)
+    creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write(creds_json)
+            tmp_path = f.name
+        creds = Credentials.from_service_account_file(tmp_path, scopes=_SCOPES)
+    else:
+        creds = Credentials.from_service_account_file(_CREDS_FILE, scopes=_SCOPES)
     gc = gspread.authorize(creds)
     return gc.open_by_key(SHEET_ID)
 
